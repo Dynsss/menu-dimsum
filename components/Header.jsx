@@ -1,6 +1,7 @@
 import Link from "next/link";
 import TombolFavoritHeader from "@/components/TombolFavoritHeader";
 import TombolKeranjangHeader from "@/components/TombolKeranjangHeader";
+import TombolModeGelap from "@/components/TombolModeGelap";
 import { toko } from "@/lib/toko";
 
 export default function Header() {
@@ -10,7 +11,7 @@ export default function Header() {
         <Link href="/" className="text-lg font-extrabold tracking-tight text-utama">
           {toko.nama}
         </Link>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
           <Link
             href="/tentang"
             className="text-sm font-semibold text-teks-lembut transition-colors hover:text-utama"
@@ -19,6 +20,7 @@ export default function Header() {
           </Link>
           <TombolFavoritHeader />
           <TombolKeranjangHeader />
+          <TombolModeGelap />
         </div>
       </div>
     </header>
