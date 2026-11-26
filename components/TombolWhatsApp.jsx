@@ -8,7 +8,33 @@ export default function TombolWhatsApp({ produk }) {
   const [jumlah, setJumlah] = useState(1);
   const [catatan, setCatatan] = useState("");
 
-  const jumlahValid = Math.max(1, Number.isFinite(jumlah) ? Math.floor(jumlah) : 1);
+  const habis = typeof produk.stok === "number" && produk.stok <= 0;
+  const batasMaks =
+    typeof produk.stok === "number" && produk.stok > 0 ? Math.min(999, produk.stok) : 999;
+
+  if (habis) {
+    return (
+      <div className="flex flex-col gap-3 pt-2">
+        <p className="rounded-lg border border-bahaya/30 bg-bahaya/5 px-4 py-3 text-sm font-medium text-bahaya">
+          Stok produk ini sedang habis dan belum dapat dipesan.
+        </p>
+        <div>
+          <button
+            type="button"
+            disabled
+            className="inline-flex w-full cursor-not-allowed items-center justify-center rounded-lg bg-garis px-5 py-3 font-semibold text-teks-lembut sm:w-auto"
+          >
+            Stok habis
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const jumlahValid = Math.min(
+    batasMaks,
+    Math.max(1, Number.isFinite(jumlah) ? Math.floor(jumlah) : 1)
+  );
   const totalHarga = produk.harga * jumlahValid;
   const catatanRapi = catatan.trim();
 

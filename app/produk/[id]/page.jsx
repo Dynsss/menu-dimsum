@@ -16,11 +16,19 @@ async function ambilProduk(id) {
 
   try {
     const supabase = buatKlienServer();
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from("produk")
-      .select("id, nama, harga, deskripsi, foto_url, kategori")
+      .select("id, nama, harga, deskripsi, foto_url, kategori, stok")
       .eq("id", id)
       .maybeSingle();
+
+    if (error && (error.code === "42703" || error.message?.includes("stok"))) {
+      ({ data, error } = await supabase
+        .from("produk")
+        .select("id, nama, harga, deskripsi, foto_url, kategori")
+        .eq("id", id)
+        .maybeSingle());
+    }
 
     if (error) {
       console.error("Gagal mengambil detail produk:", error);
@@ -72,13 +80,23 @@ export default async function HalamanDetailProduk({ params }) {
   if (produk.kategori) {
     try {
       const supabase = buatKlienServer();
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from("produk")
-        .select("id, nama, harga, foto_url, kategori")
+        .select("id, nama, harga, foto_url, kategori, stok")
         .eq("kategori", produk.kategori)
         .neq("id", produk.id)
         .order("id", { ascending: true })
         .limit(3);
+
+      if (error && (error.code === "42703" || error.message?.includes("stok"))) {
+        ({ data, error } = await supabase
+          .from("produk")
+          .select("id, nama, harga, foto_url, kategori")
+          .eq("kategori", produk.kategori)
+          .neq("id", produk.id)
+          .order("id", { ascending: true })
+          .limit(3));
+      }
 
       if (!error && data) {
         produkTerkait = data;
@@ -89,6 +107,7 @@ export default async function HalamanDetailProduk({ params }) {
   }
 
   const daftarFoto = ambilDaftarFoto(produk.foto_url);
+  const stokHabis = typeof produk.stok === "number" && produk.stok <= 0;
 
   return (
     <>
@@ -98,7 +117,18 @@ export default async function HalamanDetailProduk({ params }) {
           <Link href="/" className="text-sm text-teks-lembut underline underline-offset-4 hover:text-utama">
             Kembali ke katalog
           </Link>
-          <p className="text-sm text-teks-lembut">{produk.kategori}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm text-teks-lembut">{produk.kategori}</p>
+            {stokHabis ? (
+              <span className="rounded-md bg-bahaya/10 px-2.5 py-0.5 text-xs font-bold text-bahaya">
+                Habis
+              </span>
+            ) : typeof produk.stok === "number" ? (
+              <span className="rounded-md bg-permukaan px-2.5 py-0.5 text-xs font-semibold text-teks-lembut">
+                Stok: {produk.stok}
+              </span>
+            ) : null}
+          </div>
           <h1 className="text-3xl font-extrabold leading-tight tracking-tight">{produk.nama}</h1>
           <p className="self-start rounded-md bg-harga-latar px-3 py-1 text-xl font-bold text-harga">
             {formatRupiah(produk.harga)}

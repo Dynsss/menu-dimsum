@@ -21,13 +21,14 @@ async function ambilDaftarProduk({ urut, kategori, halaman }) {
     const supabase = buatKlienServer();
     const daftarKategori = await ambilDaftarKategori(supabase);
 
-    const bangunQuery = (halamanTarget) => {
+    const bangunQuery = (halamanTarget, sertakanStok = true) => {
       const awal = (halamanTarget - 1) * PRODUK_PER_HALAMAN;
       const akhir = awal + PRODUK_PER_HALAMAN - 1;
+      const kolom = sertakanStok
+        ? "id, nama, harga, foto_url, kategori, created_at, stok"
+        : "id, nama, harga, foto_url, kategori, created_at";
 
-      let query = supabase
-        .from("produk")
-        .select("id, nama, harga, foto_url, kategori, created_at", { count: "exact" });
+      let query = supabase.from("produk").select(kolom, { count: "exact" });
 
       if (kategori) {
         query = query.eq("kategori", kategori);
@@ -46,7 +47,13 @@ async function ambilDaftarProduk({ urut, kategori, halaman }) {
       return query.range(awal, akhir);
     };
 
-    let { data, count, error } = await bangunQuery(halaman);
+    let sertakanStok = true;
+    let { data, count, error } = await bangunQuery(halaman, sertakanStok);
+
+    if (error && (error.code === "42703" || error.message?.includes("stok"))) {
+      sertakanStok = false;
+      ({ data, count, error } = await bangunQuery(halaman, false));
+    }
 
     if (error) {
       console.error("Gagal mengambil data produk:", error);
@@ -67,7 +74,7 @@ async function ambilDaftarProduk({ urut, kategori, halaman }) {
 
     if (halaman > totalHalaman && totalProduk > 0) {
       halamanAktif = totalHalaman;
-      const ulang = await bangunQuery(halamanAktif);
+      const ulang = await bangunQuery(halamanAktif, sertakanStok);
       if (!ulang.error) {
         data = ulang.data;
       }

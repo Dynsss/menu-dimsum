@@ -90,10 +90,17 @@ export async function ambilDaftarProdukAdmin() {
       };
     }
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from("produk")
-      .select("id, nama, harga, deskripsi, foto_url, kategori, created_at")
+      .select("id, nama, harga, deskripsi, foto_url, kategori, stok, created_at")
       .order("id", { ascending: true });
+
+    if (error && (error.code === "42703" || error.message?.includes("stok"))) {
+      ({ data, error } = await supabase
+        .from("produk")
+        .select("id, nama, harga, deskripsi, foto_url, kategori, created_at")
+        .order("id", { ascending: true }));
+    }
 
     if (error) {
       console.error("Gagal mengambil daftar produk admin:", error);
@@ -126,6 +133,7 @@ export async function ambilDaftarProdukAdmin() {
 export async function tambahProduk(_stateSebelumnya, formData) {
   const nama = String(formData.get("nama") ?? "").trim();
   const hargaTeks = String(formData.get("harga") ?? "").trim();
+  const stokTeks = String(formData.get("stok") ?? "0").trim();
   const kategori = String(formData.get("kategori") ?? "").trim();
   const deskripsi = String(formData.get("deskripsi") ?? "").trim();
   const daftarFoto = formData
@@ -135,6 +143,7 @@ export async function tambahProduk(_stateSebelumnya, formData) {
   const nilai = {
     nama,
     harga: hargaTeks,
+    stok: stokTeks,
     kategori,
     deskripsi,
   };
@@ -157,6 +166,14 @@ export async function tambahProduk(_stateSebelumnya, formData) {
     if (!hargaTeks || !Number.isFinite(harga) || !Number.isInteger(harga) || harga <= 0) {
       return {
         error: "Harga produk wajib diisi dengan angka bulat lebih dari 0.",
+        nilai,
+      };
+    }
+
+    const stok = Number(stokTeks);
+    if (stokTeks === "" || !Number.isFinite(stok) || !Number.isInteger(stok) || stok < 0) {
+      return {
+        error: "Stok produk wajib diisi dengan angka bulat 0 atau lebih.",
         nilai,
       };
     }
@@ -254,13 +271,24 @@ export async function tambahProduk(_stateSebelumnya, formData) {
       daftarUrlFoto.push(dataUrl.publicUrl);
     }
 
-    const { error: errorSimpan } = await supabase.from("produk").insert({
+    let { error: errorSimpan } = await supabase.from("produk").insert({
       nama,
       harga,
+      stok,
       kategori,
       deskripsi,
       foto_url: serialisasiFoto(daftarUrlFoto),
     });
+
+    if (errorSimpan && (errorSimpan.code === "42703" || errorSimpan.message?.includes("stok"))) {
+      ({ error: errorSimpan } = await supabase.from("produk").insert({
+        nama,
+        harga,
+        kategori,
+        deskripsi,
+        foto_url: serialisasiFoto(daftarUrlFoto),
+      }));
+    }
 
     if (errorSimpan) {
       console.error("Gagal menyimpan produk ke database:", errorSimpan);
@@ -292,6 +320,7 @@ export async function ubahProduk(_stateSebelumnya, formData) {
   const id = String(formData.get("id") ?? "").trim();
   const nama = String(formData.get("nama") ?? "").trim();
   const hargaTeks = String(formData.get("harga") ?? "").trim();
+  const stokTeks = String(formData.get("stok") ?? "0").trim();
   const kategori = String(formData.get("kategori") ?? "").trim();
   const deskripsi = String(formData.get("deskripsi") ?? "").trim();
   const fotoUrlLama = String(formData.get("foto_url_lama") ?? "").trim();
@@ -302,6 +331,7 @@ export async function ubahProduk(_stateSebelumnya, formData) {
   const nilai = {
     nama,
     harga: hargaTeks,
+    stok: stokTeks,
     kategori,
     deskripsi,
   };
@@ -332,6 +362,14 @@ export async function ubahProduk(_stateSebelumnya, formData) {
       };
     }
 
+    const stok = Number(stokTeks);
+    if (stokTeks === "" || !Number.isFinite(stok) || !Number.isInteger(stok) || stok < 0) {
+      return {
+        error: "Stok produk wajib diisi dengan angka bulat 0 atau lebih.",
+        nilai,
+      };
+    }
+
     if (!kategori) {
       return { error: "Kategori produk wajib diisi.", nilai };
     }
@@ -357,6 +395,7 @@ export async function ubahProduk(_stateSebelumnya, formData) {
     const dataUpdate = {
       nama,
       harga,
+      stok,
       kategori,
       deskripsi,
     };
@@ -414,10 +453,18 @@ export async function ubahProduk(_stateSebelumnya, formData) {
       dataUpdate.foto_url = serialisasiFoto(daftarUrlFoto);
     }
 
-    const { error: errorSimpan } = await supabase
+    let { error: errorSimpan } = await supabase
       .from("produk")
       .update(dataUpdate)
       .eq("id", id);
+
+    if (errorSimpan && (errorSimpan.code === "42703" || errorSimpan.message?.includes("stok"))) {
+      const { stok: _abaikanStok, ...dataTanpaStok } = dataUpdate;
+      ({ error: errorSimpan } = await supabase
+        .from("produk")
+        .update(dataTanpaStok)
+        .eq("id", id));
+    }
 
     if (errorSimpan) {
       console.error("Gagal menyimpan perubahan produk ke database:", errorSimpan);

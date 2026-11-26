@@ -123,6 +123,16 @@ export default function FormProduk({ produk = {}, action, labelTombol }) {
         required
       />
       <Input
+        label="Stok"
+        name="stok"
+        type="number"
+        min="0"
+        step="1"
+        defaultValue={nilai.stok ?? produk.stok ?? 10}
+        placeholder="Contoh: 10 (isi 0 jika habis)"
+        required
+      />
+      <Input
         label="Kategori"
         name="kategori"
         value={kategori}

@@ -22,11 +22,19 @@ export default async function HalamanUbahProduk({ params }) {
     notFound();
   }
 
-  const { data: produk, error } = await supabase
+  let { data: produk, error } = await supabase
     .from("produk")
-    .select("id, nama, harga, deskripsi, foto_url, kategori")
+    .select("id, nama, harga, deskripsi, foto_url, kategori, stok")
     .eq("id", id)
     .maybeSingle();
+
+  if (error && (error.code === "42703" || error.message?.includes("stok"))) {
+    ({ data: produk, error } = await supabase
+      .from("produk")
+      .select("id, nama, harga, deskripsi, foto_url, kategori")
+      .eq("id", id)
+      .maybeSingle());
+  }
 
   if (error || !produk) {
     notFound();

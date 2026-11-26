@@ -44,9 +44,22 @@ export default function TabelProduk({ daftarProduk }) {
                   <span>{produk.kategori || "Tanpa kategori"}</span>
                 </div>
                 <h2 className="mt-1 font-semibold text-teks">{produk.nama}</h2>
-                <p className="mt-1 inline-block rounded-md bg-harga-latar px-2 py-0.5 text-sm font-bold text-harga">
-                  {formatRupiah(produk.harga ?? 0)}
-                </p>
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <p className="inline-block rounded-md bg-harga-latar px-2 py-0.5 text-sm font-bold text-harga">
+                    {formatRupiah(produk.harga ?? 0)}
+                  </p>
+                  {typeof produk.stok === "number" && (
+                    <span
+                      className={`rounded-md px-2 py-0.5 text-xs font-semibold ${
+                        produk.stok <= 0
+                          ? "bg-bahaya/10 text-bahaya"
+                          : "bg-permukaan text-teks-lembut"
+                      }`}
+                    >
+                      {produk.stok <= 0 ? "Habis" : `Stok: ${produk.stok}`}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
             <p className="text-sm leading-relaxed text-teks-lembut">
@@ -102,9 +115,22 @@ export default function TabelProduk({ daftarProduk }) {
                   {produk.kategori || "Tanpa kategori"}
                 </td>
                 <td className="whitespace-nowrap px-4 py-3">
-                  <span className="rounded-md bg-harga-latar px-2 py-0.5 font-bold text-harga">
-                    {formatRupiah(produk.harga ?? 0)}
-                  </span>
+                  <div className="flex flex-col items-start gap-1">
+                    <span className="rounded-md bg-harga-latar px-2 py-0.5 font-bold text-harga">
+                      {formatRupiah(produk.harga ?? 0)}
+                    </span>
+                    {typeof produk.stok === "number" && (
+                      <span
+                        className={`rounded-md px-2 py-0.5 text-xs font-semibold ${
+                          produk.stok <= 0
+                            ? "bg-bahaya/10 text-bahaya"
+                            : "bg-permukaan text-teks-lembut"
+                        }`}
+                      >
+                        {produk.stok <= 0 ? "Habis" : `Stok: ${produk.stok}`}
+                      </span>
+                    )}
+                  </div>
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex justify-end gap-2">
