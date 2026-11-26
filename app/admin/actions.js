@@ -92,10 +92,16 @@ export async function ambilDaftarProdukAdmin() {
 
     let { data, error } = await supabase
       .from("produk")
-      .select("id, nama, harga, deskripsi, foto_url, kategori, stok, created_at")
+      .select("id, nama, harga, harga_diskon, badge, deskripsi, foto_url, kategori, stok, created_at")
       .order("id", { ascending: true });
 
-    if (error && (error.code === "42703" || error.message?.includes("stok"))) {
+    if (
+      error &&
+      (error.code === "42703" ||
+        error.message?.includes("stok") ||
+        error.message?.includes("harga_diskon") ||
+        error.message?.includes("badge"))
+    ) {
       ({ data, error } = await supabase
         .from("produk")
         .select("id, nama, harga, deskripsi, foto_url, kategori, created_at")
@@ -133,6 +139,8 @@ export async function ambilDaftarProdukAdmin() {
 export async function tambahProduk(_stateSebelumnya, formData) {
   const nama = String(formData.get("nama") ?? "").trim();
   const hargaTeks = String(formData.get("harga") ?? "").trim();
+  const hargaDiskonTeks = String(formData.get("harga_diskon") ?? "").trim();
+  const badgeTeks = String(formData.get("badge") ?? "").trim();
   const stokTeks = String(formData.get("stok") ?? "0").trim();
   const kategori = String(formData.get("kategori") ?? "").trim();
   const deskripsi = String(formData.get("deskripsi") ?? "").trim();
@@ -143,6 +151,8 @@ export async function tambahProduk(_stateSebelumnya, formData) {
   const nilai = {
     nama,
     harga: hargaTeks,
+    harga_diskon: hargaDiskonTeks,
+    badge: badgeTeks,
     stok: stokTeks,
     kategori,
     deskripsi,
@@ -169,6 +179,25 @@ export async function tambahProduk(_stateSebelumnya, formData) {
         nilai,
       };
     }
+
+    let hargaDiskon = null;
+    if (hargaDiskonTeks !== "") {
+      const angkaDiskon = Number(hargaDiskonTeks);
+      if (
+        !Number.isFinite(angkaDiskon) ||
+        !Number.isInteger(angkaDiskon) ||
+        angkaDiskon <= 0 ||
+        angkaDiskon >= harga
+      ) {
+        return {
+          error: "Harga diskon harus berupa angka bulat lebih dari 0 dan lebih kecil dari harga normal.",
+          nilai,
+        };
+      }
+      hargaDiskon = angkaDiskon;
+    }
+
+    const badge = ["Baru", "Terlaris"].includes(badgeTeks) ? badgeTeks : null;
 
     const stok = Number(stokTeks);
     if (stokTeks === "" || !Number.isFinite(stok) || !Number.isInteger(stok) || stok < 0) {
@@ -274,13 +303,21 @@ export async function tambahProduk(_stateSebelumnya, formData) {
     let { error: errorSimpan } = await supabase.from("produk").insert({
       nama,
       harga,
+      harga_diskon: hargaDiskon,
+      badge,
       stok,
       kategori,
       deskripsi,
       foto_url: serialisasiFoto(daftarUrlFoto),
     });
 
-    if (errorSimpan && (errorSimpan.code === "42703" || errorSimpan.message?.includes("stok"))) {
+    if (
+      errorSimpan &&
+      (errorSimpan.code === "42703" ||
+        errorSimpan.message?.includes("stok") ||
+        errorSimpan.message?.includes("harga_diskon") ||
+        errorSimpan.message?.includes("badge"))
+    ) {
       ({ error: errorSimpan } = await supabase.from("produk").insert({
         nama,
         harga,
@@ -320,6 +357,8 @@ export async function ubahProduk(_stateSebelumnya, formData) {
   const id = String(formData.get("id") ?? "").trim();
   const nama = String(formData.get("nama") ?? "").trim();
   const hargaTeks = String(formData.get("harga") ?? "").trim();
+  const hargaDiskonTeks = String(formData.get("harga_diskon") ?? "").trim();
+  const badgeTeks = String(formData.get("badge") ?? "").trim();
   const stokTeks = String(formData.get("stok") ?? "0").trim();
   const kategori = String(formData.get("kategori") ?? "").trim();
   const deskripsi = String(formData.get("deskripsi") ?? "").trim();
@@ -331,6 +370,8 @@ export async function ubahProduk(_stateSebelumnya, formData) {
   const nilai = {
     nama,
     harga: hargaTeks,
+    harga_diskon: hargaDiskonTeks,
+    badge: badgeTeks,
     stok: stokTeks,
     kategori,
     deskripsi,
@@ -361,6 +402,25 @@ export async function ubahProduk(_stateSebelumnya, formData) {
         nilai,
       };
     }
+
+    let hargaDiskon = null;
+    if (hargaDiskonTeks !== "") {
+      const angkaDiskon = Number(hargaDiskonTeks);
+      if (
+        !Number.isFinite(angkaDiskon) ||
+        !Number.isInteger(angkaDiskon) ||
+        angkaDiskon <= 0 ||
+        angkaDiskon >= harga
+      ) {
+        return {
+          error: "Harga diskon harus berupa angka bulat lebih dari 0 dan lebih kecil dari harga normal.",
+          nilai,
+        };
+      }
+      hargaDiskon = angkaDiskon;
+    }
+
+    const badge = ["Baru", "Terlaris"].includes(badgeTeks) ? badgeTeks : null;
 
     const stok = Number(stokTeks);
     if (stokTeks === "" || !Number.isFinite(stok) || !Number.isInteger(stok) || stok < 0) {
@@ -395,6 +455,8 @@ export async function ubahProduk(_stateSebelumnya, formData) {
     const dataUpdate = {
       nama,
       harga,
+      harga_diskon: hargaDiskon,
+      badge,
       stok,
       kategori,
       deskripsi,
@@ -458,11 +520,22 @@ export async function ubahProduk(_stateSebelumnya, formData) {
       .update(dataUpdate)
       .eq("id", id);
 
-    if (errorSimpan && (errorSimpan.code === "42703" || errorSimpan.message?.includes("stok"))) {
-      const { stok: _abaikanStok, ...dataTanpaStok } = dataUpdate;
+    if (
+      errorSimpan &&
+      (errorSimpan.code === "42703" ||
+        errorSimpan.message?.includes("stok") ||
+        errorSimpan.message?.includes("harga_diskon") ||
+        errorSimpan.message?.includes("badge"))
+    ) {
+      const {
+        stok: _abaikanStok,
+        harga_diskon: _abaikanDiskon,
+        badge: _abaikanBadge,
+        ...dataTanpaOpsional
+      } = dataUpdate;
       ({ error: errorSimpan } = await supabase
         .from("produk")
-        .update(dataTanpaStok)
+        .update(dataTanpaOpsional)
         .eq("id", id));
     }
 

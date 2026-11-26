@@ -1,4 +1,4 @@
-import { formatRupiah } from "@/lib/format";
+import { dapatkanInfoHarga, formatRupiah } from "@/lib/format";
 import { ambilFotoUtama } from "@/lib/foto";
 import Tombol from "@/components/Tombol";
 
@@ -29,53 +29,70 @@ export default function TabelProduk({ daftarProduk }) {
     <>
       {/* Tampilan kartu untuk layar mobile */}
       <div className="flex flex-col gap-3 md:hidden">
-        {daftarProduk.map((produk) => (
-          <article
-            key={produk.id}
-            className="flex flex-col gap-3 rounded-2xl border border-garis bg-latar p-4"
-          >
-            <div className="flex items-start gap-3">
-              <FotoProduk fotoUrl={produk.foto_url} nama={produk.nama} ukuranKelas="h-16 w-16" />
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2 text-xs text-teks-lembut">
-                  <span className="rounded bg-permukaan px-1.5 py-0.5 font-semibold text-teks">
-                    #{produk.id}
-                  </span>
-                  <span>{produk.kategori || "Tanpa kategori"}</span>
-                </div>
-                <h2 className="mt-1 font-semibold text-teks">{produk.nama}</h2>
-                <div className="mt-1 flex flex-wrap items-center gap-2">
-                  <p className="inline-block rounded-md bg-harga-latar px-2 py-0.5 text-sm font-bold text-harga">
-                    {formatRupiah(produk.harga ?? 0)}
-                  </p>
-                  {typeof produk.stok === "number" && (
-                    <span
-                      className={`rounded-md px-2 py-0.5 text-xs font-semibold ${
-                        produk.stok <= 0
-                          ? "bg-bahaya/10 text-bahaya"
-                          : "bg-permukaan text-teks-lembut"
-                      }`}
-                    >
-                      {produk.stok <= 0 ? "Habis" : `Stok: ${produk.stok}`}
+        {daftarProduk.map((produk) => {
+          const { adaDiskon, hargaAktif, hargaCoret } = dapatkanInfoHarga(produk);
+          return (
+            <article
+              key={produk.id}
+              className="flex flex-col gap-3 rounded-2xl border border-garis bg-latar p-4"
+            >
+              <div className="flex items-start gap-3">
+                <FotoProduk fotoUrl={produk.foto_url} nama={produk.nama} ukuranKelas="h-16 w-16" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-teks-lembut">
+                    <span className="rounded bg-permukaan px-1.5 py-0.5 font-semibold text-teks">
+                      #{produk.id}
                     </span>
-                  )}
+                    <span>{produk.kategori || "Tanpa kategori"}</span>
+                    {produk.badge && (
+                      <span
+                        className={`rounded px-1.5 py-0.5 font-bold text-white ${
+                          produk.badge === "Terlaris" ? "bg-harga" : "bg-utama"
+                        }`}
+                      >
+                        {produk.badge}
+                      </span>
+                    )}
+                  </div>
+                  <h2 className="mt-1 font-semibold text-teks">{produk.nama}</h2>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <p className="inline-block rounded-md bg-harga-latar px-2 py-0.5 text-sm font-bold text-harga">
+                      {formatRupiah(hargaAktif)}
+                    </p>
+                    {adaDiskon && (
+                      <p className="text-xs text-teks-lembut line-through">
+                        {formatRupiah(hargaCoret)}
+                      </p>
+                    )}
+                    {typeof produk.stok === "number" && (
+                      <span
+                        className={`rounded-md px-2 py-0.5 text-xs font-semibold ${
+                          produk.stok <= 0
+                            ? "bg-bahaya/10 text-bahaya"
+                            : "bg-permukaan text-teks-lembut"
+                        }`}
+                      >
+                        {produk.stok <= 0 ? "Habis" : `Stok: ${produk.stok}`}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-            <p className="text-sm leading-relaxed text-teks-lembut">
-              {produk.deskripsi || "Tidak ada deskripsi."}
-            </p>
-            <div className="flex gap-2 pt-1">
-              {/* US-09 dan US-10 (bonus): ubah dan hapus produk */}
-              <Tombol href={`/admin/produk/${produk.id}/ubah`} varian="garis" className="flex-1">
-                Ubah
-              </Tombol>
-              <Tombol type="button" varian="bahaya" className="flex-1">
-                Hapus
-              </Tombol>
-            </div>
-          </article>
-        ))}
+              <p className="text-sm leading-relaxed text-teks-lembut">
+                {produk.deskripsi || "Tidak ada deskripsi."}
+              </p>
+              <div className="flex gap-2 pt-1">
+                {/* US-09 dan US-10 (bonus): ubah dan hapus produk */}
+                <Tombol href={`/admin/produk/${produk.id}/ubah`} varian="garis" className="flex-1">
+                  Ubah
+                </Tombol>
+                <Tombol type="button" varian="bahaya" className="flex-1">
+                  Hapus
+                </Tombol>
+              </div>
+            </article>
+          );
+        })}
       </div>
 
       {/* Tampilan tabel untuk layar desktop */}
@@ -93,58 +110,77 @@ export default function TabelProduk({ daftarProduk }) {
             </tr>
           </thead>
           <tbody>
-            {daftarProduk.map((produk) => (
-              <tr key={produk.id} className="border-t border-garis align-top">
-                <td className="px-4 py-3 font-semibold text-teks-lembut">#{produk.id}</td>
-                <td className="px-4 py-3">
-                  <div className="flex items-start gap-3">
-                    <FotoProduk
-                      fotoUrl={produk.foto_url}
-                      nama={produk.nama}
-                      ukuranKelas="h-12 w-12"
-                    />
-                    <div className="min-w-0">
-                      <p className="font-semibold text-teks">{produk.nama}</p>
-                      <p className="mt-0.5 max-w-md text-xs leading-relaxed text-teks-lembut">
-                        {produk.deskripsi || "Tidak ada deskripsi."}
-                      </p>
+            {daftarProduk.map((produk) => {
+              const { adaDiskon, hargaAktif, hargaCoret } = dapatkanInfoHarga(produk);
+              return (
+                <tr key={produk.id} className="border-t border-garis align-top">
+                  <td className="px-4 py-3 font-semibold text-teks-lembut">#{produk.id}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-start gap-3">
+                      <FotoProduk
+                        fotoUrl={produk.foto_url}
+                        nama={produk.nama}
+                        ukuranKelas="h-12 w-12"
+                      />
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-semibold text-teks">{produk.nama}</p>
+                          {produk.badge && (
+                            <span
+                              className={`rounded px-1.5 py-0.5 text-xs font-bold text-white ${
+                                produk.badge === "Terlaris" ? "bg-harga" : "bg-utama"
+                              }`}
+                            >
+                              {produk.badge}
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-0.5 max-w-md text-xs leading-relaxed text-teks-lembut">
+                          {produk.deskripsi || "Tidak ada deskripsi."}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-teks-lembut">
-                  {produk.kategori || "Tanpa kategori"}
-                </td>
-                <td className="whitespace-nowrap px-4 py-3">
-                  <div className="flex flex-col items-start gap-1">
-                    <span className="rounded-md bg-harga-latar px-2 py-0.5 font-bold text-harga">
-                      {formatRupiah(produk.harga ?? 0)}
-                    </span>
-                    {typeof produk.stok === "number" && (
-                      <span
-                        className={`rounded-md px-2 py-0.5 text-xs font-semibold ${
-                          produk.stok <= 0
-                            ? "bg-bahaya/10 text-bahaya"
-                            : "bg-permukaan text-teks-lembut"
-                        }`}
-                      >
-                        {produk.stok <= 0 ? "Habis" : `Stok: ${produk.stok}`}
+                  </td>
+                  <td className="px-4 py-3 text-teks-lembut">
+                    {produk.kategori || "Tanpa kategori"}
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3">
+                    <div className="flex flex-col items-start gap-1">
+                      <span className="rounded-md bg-harga-latar px-2 py-0.5 font-bold text-harga">
+                        {formatRupiah(hargaAktif)}
                       </span>
-                    )}
-                  </div>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex justify-end gap-2">
-                    {/* US-09 dan US-10 (bonus): ubah dan hapus produk */}
-                    <Tombol href={`/admin/produk/${produk.id}/ubah`} varian="garis">
-                      Ubah
-                    </Tombol>
-                    <Tombol type="button" varian="bahaya">
-                      Hapus
-                    </Tombol>
-                  </div>
-                </td>
-              </tr>
-            ))}
+                      {adaDiskon && (
+                        <span className="text-xs text-teks-lembut line-through">
+                          {formatRupiah(hargaCoret)}
+                        </span>
+                      )}
+                      {typeof produk.stok === "number" && (
+                        <span
+                          className={`rounded-md px-2 py-0.5 text-xs font-semibold ${
+                            produk.stok <= 0
+                              ? "bg-bahaya/10 text-bahaya"
+                              : "bg-permukaan text-teks-lembut"
+                          }`}
+                        >
+                          {produk.stok <= 0 ? "Habis" : `Stok: ${produk.stok}`}
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex justify-end gap-2">
+                      {/* US-09 dan US-10 (bonus): ubah dan hapus produk */}
+                      <Tombol href={`/admin/produk/${produk.id}/ubah`} varian="garis">
+                        Ubah
+                      </Tombol>
+                      <Tombol type="button" varian="bahaya">
+                        Hapus
+                      </Tombol>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

@@ -4,7 +4,7 @@ import GaleriFotoProduk from "@/components/GaleriFotoProduk";
 import KartuProduk from "@/components/KartuProduk";
 import TombolWhatsApp from "@/components/TombolWhatsApp";
 import { buatKlienServer } from "@/lib/supabase/server";
-import { formatRupiah } from "@/lib/format";
+import { dapatkanInfoHarga, formatRupiah } from "@/lib/format";
 import { ambilDaftarFoto } from "@/lib/foto";
 
 export const dynamic = "force-dynamic";
@@ -18,11 +18,17 @@ async function ambilProduk(id) {
     const supabase = buatKlienServer();
     let { data, error } = await supabase
       .from("produk")
-      .select("id, nama, harga, deskripsi, foto_url, kategori, stok")
+      .select("id, nama, harga, harga_diskon, badge, deskripsi, foto_url, kategori, stok")
       .eq("id", id)
       .maybeSingle();
 
-    if (error && (error.code === "42703" || error.message?.includes("stok"))) {
+    if (
+      error &&
+      (error.code === "42703" ||
+        error.message?.includes("stok") ||
+        error.message?.includes("harga_diskon") ||
+        error.message?.includes("badge"))
+    ) {
       ({ data, error } = await supabase
         .from("produk")
         .select("id, nama, harga, deskripsi, foto_url, kategori")
@@ -82,13 +88,19 @@ export default async function HalamanDetailProduk({ params }) {
       const supabase = buatKlienServer();
       let { data, error } = await supabase
         .from("produk")
-        .select("id, nama, harga, foto_url, kategori, stok")
+        .select("id, nama, harga, harga_diskon, badge, foto_url, kategori, stok")
         .eq("kategori", produk.kategori)
         .neq("id", produk.id)
         .order("id", { ascending: true })
         .limit(3);
 
-      if (error && (error.code === "42703" || error.message?.includes("stok"))) {
+      if (
+        error &&
+        (error.code === "42703" ||
+          error.message?.includes("stok") ||
+          error.message?.includes("harga_diskon") ||
+          error.message?.includes("badge"))
+      ) {
         ({ data, error } = await supabase
           .from("produk")
           .select("id, nama, harga, foto_url, kategori")
@@ -108,6 +120,7 @@ export default async function HalamanDetailProduk({ params }) {
 
   const daftarFoto = ambilDaftarFoto(produk.foto_url);
   const stokHabis = typeof produk.stok === "number" && produk.stok <= 0;
+  const { adaDiskon, hargaAktif, hargaCoret } = dapatkanInfoHarga(produk);
 
   return (
     <>
@@ -119,6 +132,15 @@ export default async function HalamanDetailProduk({ params }) {
           </Link>
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-sm text-teks-lembut">{produk.kategori}</p>
+            {produk.badge && (
+              <span
+                className={`rounded-md px-2.5 py-0.5 text-xs font-bold text-white ${
+                  produk.badge === "Terlaris" ? "bg-harga" : "bg-utama"
+                }`}
+              >
+                {produk.badge}
+              </span>
+            )}
             {stokHabis ? (
               <span className="rounded-md bg-bahaya/10 px-2.5 py-0.5 text-xs font-bold text-bahaya">
                 Habis
@@ -130,9 +152,14 @@ export default async function HalamanDetailProduk({ params }) {
             ) : null}
           </div>
           <h1 className="text-3xl font-extrabold leading-tight tracking-tight">{produk.nama}</h1>
-          <p className="self-start rounded-md bg-harga-latar px-3 py-1 text-xl font-bold text-harga">
-            {formatRupiah(produk.harga)}
-          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="rounded-md bg-harga-latar px-3 py-1 text-xl font-bold text-harga">
+              {formatRupiah(hargaAktif)}
+            </p>
+            {adaDiskon && (
+              <p className="text-base text-teks-lembut line-through">{formatRupiah(hargaCoret)}</p>
+            )}
+          </div>
           <p className="max-w-prose leading-relaxed text-teks-lembut">{produk.deskripsi}</p>
           <TombolWhatsApp produk={produk} />
         </div>

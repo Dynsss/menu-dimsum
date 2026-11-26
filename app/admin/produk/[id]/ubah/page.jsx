@@ -24,11 +24,17 @@ export default async function HalamanUbahProduk({ params }) {
 
   let { data: produk, error } = await supabase
     .from("produk")
-    .select("id, nama, harga, deskripsi, foto_url, kategori, stok")
+    .select("id, nama, harga, harga_diskon, badge, deskripsi, foto_url, kategori, stok")
     .eq("id", id)
     .maybeSingle();
 
-  if (error && (error.code === "42703" || error.message?.includes("stok"))) {
+  if (
+    error &&
+    (error.code === "42703" ||
+      error.message?.includes("stok") ||
+      error.message?.includes("harga_diskon") ||
+      error.message?.includes("badge"))
+  ) {
     ({ data: produk, error } = await supabase
       .from("produk")
       .select("id, nama, harga, deskripsi, foto_url, kategori")

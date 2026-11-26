@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { formatRupiah } from "@/lib/format";
+import { dapatkanInfoHarga, formatRupiah } from "@/lib/format";
 import { toko } from "@/lib/toko";
 
 export default function TombolWhatsApp({ produk }) {
@@ -31,16 +31,17 @@ export default function TombolWhatsApp({ produk }) {
     );
   }
 
+  const { hargaAktif } = dapatkanInfoHarga(produk);
   const jumlahValid = Math.min(
     batasMaks,
     Math.max(1, Number.isFinite(jumlah) ? Math.floor(jumlah) : 1)
   );
-  const totalHarga = produk.harga * jumlahValid;
+  const totalHarga = hargaAktif * jumlahValid;
   const catatanRapi = catatan.trim();
 
   const nomor = String(toko.nomorWhatsApp).replace(/\D/g, "");
   const pesan =
-    `Halo ${toko.nama}, saya ingin memesan ${produk.nama} (${formatRupiah(produk.harga)}) sebanyak ${jumlahValid}x (Total: ${formatRupiah(totalHarga)}).` +
+    `Halo ${toko.nama}, saya ingin memesan ${produk.nama} (${formatRupiah(hargaAktif)}) sebanyak ${jumlahValid}x (Total: ${formatRupiah(totalHarga)}).` +
     (catatanRapi ? ` Varian/catatan: ${catatanRapi}.` : "");
   const url = `https://wa.me/${nomor}?text=${encodeURIComponent(pesan)}`;
 
