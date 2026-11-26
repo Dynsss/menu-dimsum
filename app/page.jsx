@@ -4,13 +4,24 @@ import { toko } from "@/lib/toko";
 
 export const dynamic = "force-dynamic";
 
-async function ambilDaftarProduk() {
+const URUT_VALID = ["termurah", "termahal", "terbaru"];
+
+async function ambilDaftarProduk(urut) {
   try {
     const supabase = buatKlienServer();
-    const { data, error } = await supabase
-      .from("produk")
-      .select("id, nama, harga, foto_url, kategori")
-      .order("id", { ascending: true });
+    let query = supabase.from("produk").select("id, nama, harga, foto_url, kategori, created_at");
+
+    if (urut === "termurah") {
+      query = query.order("harga", { ascending: true }).order("id", { ascending: true });
+    } else if (urut === "termahal") {
+      query = query.order("harga", { ascending: false }).order("id", { ascending: true });
+    } else if (urut === "terbaru") {
+      query = query.order("created_at", { ascending: false }).order("id", { ascending: false });
+    } else {
+      query = query.order("id", { ascending: true });
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error("Gagal mengambil data produk:", error);
@@ -37,8 +48,11 @@ async function ambilDaftarProduk() {
   }
 }
 
-export default async function HalamanKatalog() {
-  const { daftarProduk, pesanError } = await ambilDaftarProduk();
+export default async function HalamanKatalog({ searchParams }) {
+  const params = await searchParams;
+  const urutMentah = typeof params?.urut === "string" ? params.urut : "";
+  const urutAktif = URUT_VALID.includes(urutMentah) ? urutMentah : "";
+  const { daftarProduk, pesanError } = await ambilDaftarProduk(urutAktif);
 
   return (
     <>
@@ -67,7 +81,7 @@ export default async function HalamanKatalog() {
             Belum ada produk
           </p>
         ) : (
-          <FilterKatalog daftarProduk={daftarProduk} />
+          <FilterKatalog daftarProduk={daftarProduk} urutAktif={urutAktif} />
         )}
       </section>
     </>

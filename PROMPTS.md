@@ -10,7 +10,7 @@ Ubah app/page.jsx supaya daftar produk diambil dari tabel "produk" di Supabase, 
 
 Tampilkan produk dengan komponen KartuProduk yang sudah ada, tanpa mengubah tampilannya. Kalau gagal mengambil data, tampilkan pesan error yang jelas di halaman. Kalau tabel kosong, tampilkan tulisan "Belum ada produk". Hapus CatatanBelumAktif dari halaman ini.*
 
-**Hasil:**
+**Hasil: **
 
 **Perbaikan:**
 
