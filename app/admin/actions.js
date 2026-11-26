@@ -68,14 +68,26 @@ export async function loginAdmin(_stateSebelumnya, formData) {
 }
 
 export async function keluarAdmin() {
+  let berhasil = false;
+
   try {
     const supabase = await buatKlienSesi();
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      console.error("Gagal keluar admin:", error);
+      return { error: "Gagal mengakhiri sesi. Silakan coba lagi." };
+    }
+
+    berhasil = true;
   } catch (error) {
     console.error("Gagal keluar admin:", error);
+    return { error: "Terjadi kesalahan saat keluar. Silakan coba lagi." };
   }
 
-  redirect("/admin/login");
+  if (berhasil) {
+    redirect("/admin/login");
+  }
 }
 
 export async function gantiPassword(_stateSebelumnya, formData) {
@@ -136,7 +148,20 @@ export async function gantiPassword(_stateSebelumnya, formData) {
   }
 }
 
-export async function ambilDaftarProdukAdmin() {
+const PRODUK_ADMIN_PER_HALAMAN = 10;
+
+export async function ambilDaftarProdukAdmin(opsi = {}) {
+  const kataKunci = typeof opsi?.q === "string" ? opsi.q.trim() : "";
+  const kategoriFilter = typeof opsi?.kategori === "string" ? opsi.kategori.trim() : "";
+  const halamanDiminta =
+    Number.isFinite(Number(opsi?.halaman)) && Number(opsi?.halaman) >= 1
+      ? Math.floor(Number(opsi.halaman))
+      : 1;
+  const perHalaman =
+    Number.isFinite(Number(opsi?.perHalaman)) && Number(opsi?.perHalaman) >= 1
+      ? Math.floor(Number(opsi.perHalaman))
+      : PRODUK_ADMIN_PER_HALAMAN;
+
   try {
     const { supabase, user } = await dapatkanAdminSesi();
 
@@ -144,14 +169,72 @@ export async function ambilDaftarProdukAdmin() {
       return {
         tidakTerautentikasi: true,
         daftarProduk: [],
+        daftarKategori: [],
+        ringkasan: { totalProduk: 0, jumlahHabis: 0, perKategori: [] },
+        totalProdukTersaring: 0,
+        totalHalaman: 1,
+        halamanAktif: 1,
         pesanError: "Sesi login telah berakhir. Silakan masuk kembali.",
       };
     }
 
-    let { data, error } = await supabase
+    // Ambil ringkasan seluruh katalog untuk dashboard & daftar kategori
+    let { data: dataRingkasan, error: errorRingkasan } = await supabase
       .from("produk")
-      .select("id, nama, harga, harga_diskon, badge, deskripsi, foto_url, kategori, stok, aktif, created_at")
-      .order("id", { ascending: true });
+      .select("kategori, stok");
+
+    if (errorRingkasan && (errorRingkasan.code === "42703" || errorRingkasan.message?.includes("stok"))) {
+      ({ data: dataRingkasan, error: errorRingkasan } = await supabase
+        .from("produk")
+        .select("kategori"));
+    }
+
+    const petaKategori = new Map();
+    let jumlahHabis = 0;
+    (dataRingkasan ?? []).forEach((item) => {
+      const namaKategori = item.kategori?.trim() || "Tanpa kategori";
+      petaKategori.set(namaKategori, (petaKategori.get(namaKategori) ?? 0) + 1);
+      if (typeof item.stok === "number" && item.stok <= 0) {
+        jumlahHabis += 1;
+      }
+    });
+
+    const perKategori = Array.from(petaKategori.entries())
+      .map(([nama, jumlah]) => ({ nama, jumlah }))
+      .sort((a, b) => a.nama.localeCompare(b.nama, "id"));
+
+    const daftarKategori = Array.from(
+      new Set((dataRingkasan ?? []).map((item) => item.kategori?.trim()).filter(Boolean))
+    ).sort((a, b) => a.localeCompare(b, "id"));
+
+    const ringkasan = {
+      totalProduk: (dataRingkasan ?? []).length,
+      jumlahHabis,
+      perKategori,
+    };
+
+    const bangunQuery = (halamanTarget, sertakanKolomOpsional = true) => {
+      const awal = (halamanTarget - 1) * perHalaman;
+      const akhir = awal + perHalaman - 1;
+      const kolom = sertakanKolomOpsional
+        ? "id, nama, harga, harga_diskon, badge, deskripsi, foto_url, kategori, stok, aktif, created_at"
+        : "id, nama, harga, deskripsi, foto_url, kategori, created_at";
+
+      let query = supabase.from("produk").select(kolom, { count: "exact" });
+
+      if (kataKunci) {
+        query = query.ilike("nama", `%${kataKunci}%`);
+      }
+
+      if (kategoriFilter) {
+        query = query.eq("kategori", kategoriFilter);
+      }
+
+      return query.order("id", { ascending: true }).range(awal, akhir);
+    };
+
+    let sertakanKolomOpsional = true;
+    let { data, count, error } = await bangunQuery(halamanDiminta, sertakanKolomOpsional);
 
     if (
       error &&
@@ -161,10 +244,8 @@ export async function ambilDaftarProdukAdmin() {
         error.message?.includes("badge") ||
         error.message?.includes("aktif"))
     ) {
-      ({ data, error } = await supabase
-        .from("produk")
-        .select("id, nama, harga, deskripsi, foto_url, kategori, created_at")
-        .order("id", { ascending: true }));
+      sertakanKolomOpsional = false;
+      ({ data, count, error } = await bangunQuery(halamanDiminta, false));
     }
 
     if (error) {
@@ -172,14 +253,36 @@ export async function ambilDaftarProdukAdmin() {
       return {
         tidakTerautentikasi: false,
         daftarProduk: [],
+        daftarKategori,
+        ringkasan,
+        totalProdukTersaring: 0,
+        totalHalaman: 1,
+        halamanAktif: 1,
         pesanError:
           "Gagal mengambil daftar produk dari database. Periksa koneksi Supabase lalu coba muat ulang.",
       };
     }
 
+    const totalProdukTersaring = count ?? 0;
+    const totalHalaman = Math.max(1, Math.ceil(totalProdukTersaring / perHalaman));
+    let halamanAktif = halamanDiminta;
+
+    if (halamanDiminta > totalHalaman && totalProdukTersaring > 0) {
+      halamanAktif = totalHalaman;
+      const ulang = await bangunQuery(halamanAktif, sertakanKolomOpsional);
+      if (!ulang.error) {
+        data = ulang.data;
+      }
+    }
+
     return {
       tidakTerautentikasi: false,
       daftarProduk: data ?? [],
+      daftarKategori,
+      ringkasan,
+      totalProdukTersaring,
+      totalHalaman,
+      halamanAktif,
       pesanError: null,
     };
   } catch (error) {
@@ -187,6 +290,11 @@ export async function ambilDaftarProdukAdmin() {
     return {
       tidakTerautentikasi: false,
       daftarProduk: [],
+      daftarKategori: [],
+      ringkasan: { totalProduk: 0, jumlahHabis: 0, perKategori: [] },
+      totalProdukTersaring: 0,
+      totalHalaman: 1,
+      halamanAktif: 1,
       pesanError:
         error instanceof Error && error.message.includes("Konfigurasi Supabase")
           ? error.message
@@ -620,6 +728,40 @@ export async function ubahProduk(_stateSebelumnya, formData) {
   revalidatePath(`/produk/${id}`);
   revalidatePath("/admin");
   redirect("/admin?status=ubah-berhasil");
+}
+
+export async function hapusProduk(id) {
+  try {
+    const { supabase, user } = await dapatkanAdminSesi();
+
+    if (!user || !supabase) {
+      return {
+        tidakTerautentikasi: true,
+        error: "Sesi login tidak ditemukan atau sudah berakhir. Silakan masuk kembali.",
+      };
+    }
+
+    const idTeks = String(id ?? "").trim();
+    if (!idTeks || !/^\d+$/.test(idTeks)) {
+      return { error: "ID produk tidak valid." };
+    }
+
+    const { error } = await supabase.from("produk").delete().eq("id", idTeks);
+
+    if (error) {
+      console.error("Gagal menghapus produk:", error);
+      return { error: "Gagal menghapus produk dari database." };
+    }
+
+    revalidatePath("/");
+    revalidatePath(`/produk/${idTeks}`);
+    revalidatePath("/admin");
+    revalidatePath("/sitemap.xml");
+    return { error: null };
+  } catch (error) {
+    console.error("Kesalahan saat menghapus produk:", error);
+    return { error: "Terjadi kesalahan saat menghapus produk." };
+  }
 }
 
 export async function toggleAktifProduk(id, aktifSaatIni) {

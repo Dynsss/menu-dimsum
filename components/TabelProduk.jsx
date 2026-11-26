@@ -2,6 +2,7 @@ import { dapatkanInfoHarga, formatRupiah } from "@/lib/format";
 import { ambilFotoUtama } from "@/lib/foto";
 import Tombol from "@/components/Tombol";
 import TombolAktifProduk from "@/components/TombolAktifProduk";
+import TombolHapusProduk from "@/components/TombolHapusProduk";
 
 function FotoProduk({ fotoUrl, nama, ukuranKelas }) {
   const fotoUtama = ambilFotoUtama(fotoUrl);
@@ -25,7 +26,7 @@ function FotoProduk({ fotoUrl, nama, ukuranKelas }) {
   );
 }
 
-export default function TabelProduk({ daftarProduk, onToggleAktif }) {
+export default function TabelProduk({ daftarProduk, onToggleAktif, onHapusProduk }) {
   return (
     <>
       {/* Tampilan kartu untuk layar mobile */}
@@ -98,9 +99,12 @@ export default function TabelProduk({ daftarProduk, onToggleAktif }) {
                 <Tombol href={`/admin/produk/${produk.id}/ubah`} varian="garis" className="flex-1">
                   Ubah
                 </Tombol>
-                <Tombol type="button" varian="bahaya" className="flex-1">
-                  Hapus
-                </Tombol>
+                <TombolHapusProduk
+                  id={produk.id}
+                  nama={produk.nama}
+                  className="flex-1"
+                  onBerhasil={onHapusProduk}
+                />
               </div>
             </article>
           );
@@ -199,9 +203,11 @@ export default function TabelProduk({ daftarProduk, onToggleAktif }) {
                       <Tombol href={`/admin/produk/${produk.id}/ubah`} varian="garis">
                         Ubah
                       </Tombol>
-                      <Tombol type="button" varian="bahaya">
-                        Hapus
-                      </Tombol>
+                      <TombolHapusProduk
+                        id={produk.id}
+                        nama={produk.nama}
+                        onBerhasil={onHapusProduk}
+                      />
                     </div>
                   </td>
                 </tr>

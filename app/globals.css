@@ -34,13 +34,13 @@ html.dark {
   --color-teks: #eef4f0;
   --color-teks-lembut: #a5b5ac;
 
-  --color-utama: #268762;
-  --color-utama-gelap: #1b6649;
+  --color-utama: #217a59;
+  --color-utama-gelap: #185c43;
 
   --color-harga: #f5c36c;
   --color-harga-latar: #362811;
 
-  --color-bahaya: #ef4444;
+  --color-bahaya: #dc2626;
   color-scheme: dark;
 }
 
