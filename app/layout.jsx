@@ -6,9 +6,22 @@ import { KeranjangProvider } from "@/components/KeranjangProvider";
 import PwaRegister from "@/components/PwaRegister";
 import { toko } from "@/lib/toko";
 
+const baseUrl =
+  process.env.SITE_URL ||
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : "http://localhost:3000");
+
 export const metadata = {
+  metadataBase: new URL(baseUrl),
   title: toko.nama,
   description: toko.tagline,
+  openGraph: {
+    title: toko.nama,
+    description: toko.tagline,
+    siteName: toko.nama,
+    type: "website",
+  },
   icons: {
     icon: "/icons/icon-192.png",
     apple: "/icons/icon-192.png",

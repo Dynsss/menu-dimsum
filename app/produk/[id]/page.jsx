@@ -1,3 +1,4 @@
+import { cache } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import GaleriFotoProduk from "@/components/GaleriFotoProduk";
@@ -7,11 +8,12 @@ import TombolFavorit from "@/components/TombolFavorit";
 import TombolWhatsApp from "@/components/TombolWhatsApp";
 import { buatKlienServer } from "@/lib/supabase/server";
 import { dapatkanInfoHarga, formatRupiah } from "@/lib/format";
-import { ambilDaftarFoto } from "@/lib/foto";
+import { ambilDaftarFoto, ambilFotoUtama } from "@/lib/foto";
+import { toko } from "@/lib/toko";
 
 export const dynamic = "force-dynamic";
 
-async function ambilProduk(id) {
+const ambilProduk = cache(async function ambilProduk(id) {
   if (!/^\d+$/.test(id)) {
     return { produk: null, pesanError: null };
   }
@@ -58,6 +60,42 @@ async function ambilProduk(id) {
           : "Terjadi kesalahan saat menghubungkan ke database. Periksa pengaturan Supabase di server.",
     };
   }
+});
+
+export async function generateMetadata({ params }) {
+  const { id } = await params;
+  const { produk } = await ambilProduk(id);
+
+  if (!produk) {
+    return {
+      title: `Produk tidak ditemukan - ${toko.nama}`,
+      description: toko.tagline,
+    };
+  }
+
+  const { hargaAktif } = dapatkanInfoHarga(produk);
+  const fotoUtama = ambilFotoUtama(produk.foto_url);
+  const judul = `${produk.nama} - ${toko.nama}`;
+  const deskripsi =
+    produk.deskripsi?.trim() || `${produk.nama} (${formatRupiah(hargaAktif)}) di ${toko.nama}.`;
+
+  return {
+    title: judul,
+    description: deskripsi,
+    openGraph: {
+      title: produk.nama,
+      description: deskripsi,
+      type: "website",
+      siteName: toko.nama,
+      ...(fotoUtama ? { images: [{ url: fotoUtama, alt: produk.nama }] } : {}),
+    },
+    twitter: {
+      card: fotoUtama ? "summary_large_image" : "summary",
+      title: produk.nama,
+      description: deskripsi,
+      ...(fotoUtama ? { images: [fotoUtama] } : {}),
+    },
+  };
 }
 
 export default async function HalamanDetailProduk({ params }) {
