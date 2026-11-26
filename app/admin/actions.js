@@ -266,3 +266,110 @@ export async function tambahProduk(_stateSebelumnya, formData) {
   revalidatePath("/admin");
   redirect("/admin?status=tambah-berhasil");
 }
+
+export async function buatDeskripsiAI({ nama, kategori }) {
+  const namaRapi = String(nama ?? "").trim();
+  const kategoriRapi = String(kategori ?? "").trim();
+
+  try {
+    const { user } = await dapatkanAdminSesi();
+
+    if (!user) {
+      return {
+        deskripsi: null,
+        error: "Sesi login tidak ditemukan atau sudah berakhir. Silakan masuk kembali.",
+      };
+    }
+
+    if (!namaRapi || !kategoriRapi) {
+      return {
+        deskripsi: null,
+        error: "Isi nama produk dan kategori terlebih dahulu sebelum membuat deskripsi dengan AI.",
+      };
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY?.trim();
+    if (!apiKey) {
+      return {
+        deskripsi: null,
+        error: "GEMINI_API_KEY belum diatur di environment variable server (.env.local).",
+      };
+    }
+
+    const model = process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash";
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
+
+    const prompt = [
+      "Buatkan deskripsi produk UMKM kuliner/toko dalam bahasa Indonesia yang singkat, menarik, jelas, dan jujur.",
+      `Nama produk: ${namaRapi}`,
+      `Kategori: ${kategoriRapi}`,
+      "Aturan: tulis 2 sampai 3 kalimat saja (maksimal 350 karakter), tanpa tanda kutip pembuka/penutup, tanpa markdown, dan tanpa bullet point.",
+    ].join("\n");
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": apiKey,
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [{ text: prompt }],
+            },
+          ],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 256,
+          },
+        }),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const detail = await response.text().catch(() => "");
+        console.error("Gemini API error:", response.status, detail);
+        return {
+          deskripsi: null,
+          error:
+            response.status === 401 || response.status === 403
+              ? "Kunci Gemini API tidak valid atau tidak memiliki izin."
+              : "Gagal membuat deskripsi dari Gemini API. Coba lagi beberapa saat.",
+        };
+      }
+
+      const data = await response.json();
+      const deskripsi = data?.candidates?.[0]?.content?.parts
+        ?.map((part) => part?.text ?? "")
+        .join("")
+        .trim();
+
+      if (!deskripsi) {
+        return {
+          deskripsi: null,
+          error: "Gemini API tidak mengembalikan teks deskripsi. Coba lagi.",
+        };
+      }
+
+      return {
+        deskripsi,
+        error: null,
+      };
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  } catch (error) {
+    console.error("Kesalahan saat memanggil Gemini API:", error);
+    return {
+      deskripsi: null,
+      error:
+        error instanceof Error && error.name === "AbortError"
+          ? "Permintaan ke Gemini API melebihi batas waktu. Coba lagi."
+          : "Terjadi kesalahan saat menghubungi Gemini API di server.",
+    };
+  }
+}

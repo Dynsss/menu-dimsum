@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
+import { buatDeskripsiAI } from "@/app/admin/actions";
 import Input from "@/components/Input";
 import Tombol from "@/components/Tombol";
 
@@ -13,8 +14,21 @@ export default function FormProduk({ produk = {}, action, labelTombol }) {
     error: null,
     nilai: null,
   });
+  const [nama, setNama] = useState(produk.nama ?? "");
+  const [kategori, setKategori] = useState(produk.kategori ?? "");
+  const [deskripsi, setDeskripsi] = useState(produk.deskripsi ?? "");
+  const [sedangBuatAI, setSedangBuatAI] = useState(false);
+  const [errorAI, setErrorAI] = useState(null);
   const [pratinjauFoto, setPratinjauFoto] = useState(null);
   const [errorFotoLokal, setErrorFotoLokal] = useState(null);
+
+  useEffect(() => {
+    if (state?.nilai) {
+      setNama(state.nilai.nama ?? "");
+      setKategori(state.nilai.kategori ?? "");
+      setDeskripsi(state.nilai.deskripsi ?? "");
+    }
+  }, [state]);
 
   useEffect(() => {
     return () => {
@@ -23,6 +37,30 @@ export default function FormProduk({ produk = {}, action, labelTombol }) {
       }
     };
   }, [pratinjauFoto]);
+
+  async function tanganiBuatDeskripsiAI() {
+    if (!nama.trim() || !kategori.trim()) {
+      setErrorAI("Isi nama produk dan kategori terlebih dahulu untuk membuat deskripsi otomatis.");
+      return;
+    }
+
+    setErrorAI(null);
+    setSedangBuatAI(true);
+    try {
+      const hasil = await buatDeskripsiAI({ nama, kategori });
+      if (hasil?.error) {
+        setErrorAI(hasil.error);
+        return;
+      }
+      if (hasil?.deskripsi) {
+        setDeskripsi(hasil.deskripsi);
+      }
+    } catch {
+      setErrorAI("Gagal membuat deskripsi dengan AI. Coba lagi.");
+    } finally {
+      setSedangBuatAI(false);
+    }
+  }
 
   function tanganiPilihFoto(event) {
     const file = event.target.files?.[0];
@@ -56,14 +94,15 @@ export default function FormProduk({ produk = {}, action, labelTombol }) {
 
   const nilai = state?.nilai ?? {};
   const fotoDitampilkan = pratinjauFoto || produk.foto_url || null;
-  const pesanError = errorFotoLokal || state?.error;
+  const pesanError = errorFotoLokal || errorAI || state?.error;
 
   return (
     <form action={formAction} className="flex max-w-xl flex-col gap-4">
       <Input
         label="Nama produk"
         name="nama"
-        defaultValue={nilai.nama ?? produk.nama ?? ""}
+        value={nama}
+        onChange={(e) => setNama(e.target.value)}
         placeholder="Contoh: Dimsum Ayam Udang (4 pcs)"
         required
       />
@@ -80,7 +119,8 @@ export default function FormProduk({ produk = {}, action, labelTombol }) {
       <Input
         label="Kategori"
         name="kategori"
-        defaultValue={nilai.kategori ?? produk.kategori ?? ""}
+        value={kategori}
+        onChange={(e) => setKategori(e.target.value)}
         placeholder="Contoh: Dimsum Kukus"
         required
       />
@@ -109,14 +149,34 @@ export default function FormProduk({ produk = {}, action, labelTombol }) {
         )}
       </div>
 
-      <Input
-        label="Deskripsi"
-        name="deskripsi"
-        textarea
-        defaultValue={nilai.deskripsi ?? produk.deskripsi ?? ""}
-        placeholder="Tuliskan deskripsi singkat produk..."
-        required
-      />
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <label htmlFor="deskripsi-produk" className="text-sm font-semibold">
+            Deskripsi
+          </label>
+          <button
+            type="button"
+            onClick={tanganiBuatDeskripsiAI}
+            disabled={sedangBuatAI || sedangMemproses}
+            className="rounded-lg border border-utama px-3 py-1.5 text-xs font-semibold text-utama transition-colors hover:bg-utama hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {sedangBuatAI ? "Membuat deskripsi..." : "Buat deskripsi dengan AI"}
+          </button>
+        </div>
+        <textarea
+          id="deskripsi-produk"
+          name="deskripsi"
+          rows={4}
+          value={deskripsi}
+          onChange={(e) => setDeskripsi(e.target.value)}
+          placeholder="Tuliskan deskripsi singkat produk..."
+          required
+          className="w-full rounded-lg border border-garis bg-latar px-3 py-2.5 text-base text-teks placeholder:text-teks-lembut focus:border-utama focus:outline-none"
+        />
+        <p className="text-xs text-teks-lembut">
+          Isi nama produk dan kategori, lalu klik tombol di atas untuk membuat deskripsi otomatis dengan Gemini AI.
+        </p>
+      </div>
 
       {pesanError && (
         <p
