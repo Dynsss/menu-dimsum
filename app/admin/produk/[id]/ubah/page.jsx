@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import NavAdmin from "@/components/NavAdmin";
 import FormProduk from "@/components/FormProduk";
-import { ubahProduk } from "@/app/admin/actions";
+import { ambilPilihanKategoriAdmin, ubahProduk } from "@/app/admin/actions";
 import { buatKlienSesi } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -46,6 +46,8 @@ export default async function HalamanUbahProduk({ params }) {
     notFound();
   }
 
+  const daftarKategori = await ambilPilihanKategoriAdmin();
+
   async function ubahProdukDenganId(_stateSebelumnya, formData) {
     "use server";
     formData.set("id", id);
@@ -57,7 +59,12 @@ export default async function HalamanUbahProduk({ params }) {
     <div className="flex flex-col gap-6 py-8">
       <NavAdmin />
       <h1 className="text-2xl font-extrabold">Ubah produk</h1>
-      <FormProduk produk={produk} action={ubahProdukDenganId} labelTombol="Simpan perubahan" />
+      <FormProduk
+        produk={produk}
+        daftarKategori={daftarKategori}
+        action={ubahProdukDenganId}
+        labelTombol="Simpan perubahan"
+      />
     </div>
   );
 }

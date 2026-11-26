@@ -10,7 +10,7 @@ const aksiBawaan = async () => ({ error: null });
 
 // Dipakai untuk tambah produk (US-08) dan ubah produk (US-09).
 // Nama field sama dengan kolom tabel "produk".
-export default function FormProduk({ produk = {}, action, labelTombol }) {
+export default function FormProduk({ produk = {}, daftarKategori = [], action, labelTombol }) {
   const [state, formAction, sedangMemproses] = useActionState(action ?? aksiBawaan, {
     error: null,
     nilai: null,
@@ -102,6 +102,12 @@ export default function FormProduk({ produk = {}, action, labelTombol }) {
   const fotoDitampilkan = pratinjauFoto.length > 0 ? pratinjauFoto : daftarFotoLama;
   const pesanError = errorFotoLokal || errorAI || state?.error;
 
+  const pilihanKategori = [...daftarKategori];
+  if (kategori && !pilihanKategori.includes(kategori)) {
+    pilihanKategori.push(kategori);
+    pilihanKategori.sort((a, b) => a.localeCompare(b, "id"));
+  }
+
   return (
     <form action={formAction} className="flex max-w-xl flex-col gap-4">
       <Input
@@ -153,14 +159,34 @@ export default function FormProduk({ produk = {}, action, labelTombol }) {
         placeholder="Contoh: 10 (isi 0 jika habis)"
         required
       />
-      <Input
-        label="Kategori"
-        name="kategori"
-        value={kategori}
-        onChange={(e) => setKategori(e.target.value)}
-        placeholder="Contoh: Dimsum Kukus"
-        required
-      />
+      {pilihanKategori.length > 0 ? (
+        <label className="flex flex-col gap-1.5 text-sm font-semibold">
+          Kategori
+          <select
+            name="kategori"
+            value={kategori}
+            onChange={(e) => setKategori(e.target.value)}
+            required
+            className="w-full rounded-lg border border-garis bg-latar px-3 py-2.5 text-base font-normal text-teks focus:border-utama focus:outline-none"
+          >
+            <option value="">Pilih kategori...</option>
+            {pilihanKategori.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : (
+        <Input
+          label="Kategori"
+          name="kategori"
+          value={kategori}
+          onChange={(e) => setKategori(e.target.value)}
+          placeholder="Contoh: Dimsum Kukus"
+          required
+        />
+      )}
 
       <div className="flex flex-col gap-2">
         <label className="flex flex-col gap-1.5 text-sm font-semibold">

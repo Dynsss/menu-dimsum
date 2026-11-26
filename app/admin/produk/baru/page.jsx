@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import NavAdmin from "@/components/NavAdmin";
 import FormProduk from "@/components/FormProduk";
 import { buatKlienSesi } from "@/lib/supabase/server";
-import { tambahProduk } from "@/app/admin/actions";
+import { ambilPilihanKategoriAdmin, tambahProduk } from "@/app/admin/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +17,8 @@ export default async function HalamanTambahProduk() {
     redirect("/admin/login");
   }
 
+  const daftarKategori = await ambilPilihanKategoriAdmin();
+
   return (
     <div className="flex flex-col gap-6 py-8">
       <NavAdmin />
@@ -26,7 +28,11 @@ export default async function HalamanTambahProduk() {
           Lengkapi informasi produk dan unggah foto untuk ditambahkan ke katalog.
         </p>
       </div>
-      <FormProduk action={tambahProduk} labelTombol="Simpan produk" />
+      <FormProduk
+        daftarKategori={daftarKategori}
+        action={tambahProduk}
+        labelTombol="Simpan produk"
+      />
     </div>
   );
 }
