@@ -6,22 +6,29 @@ import DaftarProdukAdmin from "./DaftarProdukAdmin";
 
 export const dynamic = "force-dynamic";
 
-export default async function HalamanAdmin() {
+export default async function HalamanAdmin({ searchParams }) {
+  const { status } = await searchParams;
   const { tidakTerautentikasi, daftarProduk, pesanError } = await ambilDaftarProdukAdmin();
 
   if (tidakTerautentikasi) {
     redirect("/admin/login");
   }
 
+  const notifikasiAwal =
+    status === "tambah-berhasil" ? "Produk baru berhasil ditambahkan." : null;
+
   return (
     <div className="flex flex-col gap-6 py-8">
       <NavAdmin />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-extrabold">Produk</h1>
-        {/* US-08 (bonus): tambah produk */}
         <Tombol href="/admin/produk/baru">Tambah produk</Tombol>
       </div>
-      <DaftarProdukAdmin daftarProdukAwal={daftarProduk} pesanErrorAwal={pesanError} />
+      <DaftarProdukAdmin
+        daftarProdukAwal={daftarProduk}
+        pesanErrorAwal={pesanError}
+        notifikasiAwal={notifikasiAwal}
+      />
     </div>
   );
 }

@@ -6,10 +6,15 @@ import TabelProduk from "@/components/TabelProduk";
 import Tombol from "@/components/Tombol";
 import { ambilDaftarProdukAdmin } from "@/app/admin/actions";
 
-export default function DaftarProdukAdmin({ daftarProdukAwal, pesanErrorAwal }) {
+export default function DaftarProdukAdmin({
+  daftarProdukAwal,
+  pesanErrorAwal,
+  notifikasiAwal = null,
+}) {
   const router = useRouter();
   const [daftarProduk, setDaftarProduk] = useState(daftarProdukAwal);
   const [pesanError, setPesanError] = useState(pesanErrorAwal);
+  const [notifikasi, setNotifikasi] = useState(notifikasiAwal);
   const [kataKunci, setKataKunci] = useState("");
   const [kategoriDipilih, setKategoriDipilih] = useState("");
   const [sedangMemuat, startTransition] = useTransition();
@@ -57,6 +62,22 @@ export default function DaftarProdukAdmin({ daftarProdukAwal, pesanErrorAwal }) 
 
   return (
     <div className="flex flex-col gap-4">
+      {notifikasi && (
+        <div
+          role="status"
+          className="flex items-center justify-between gap-3 rounded-2xl border border-utama/30 bg-utama/10 px-4 py-3 text-sm font-medium text-utama"
+        >
+          <p>{notifikasi}</p>
+          <button
+            type="button"
+            onClick={() => setNotifikasi(null)}
+            className="text-xs font-semibold underline underline-offset-4 hover:text-utama-gelap"
+          >
+            Tutup
+          </button>
+        </div>
+      )}
+
       <div className="flex flex-col gap-3 rounded-2xl border border-garis bg-permukaan p-4 sm:flex-row sm:items-end">
         <label className="flex flex-1 flex-col gap-1.5 text-sm font-semibold">
           Cari produk
