@@ -1,15 +1,65 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import TombolWhatsApp from "@/components/TombolWhatsApp";
-import CatatanBelumAktif from "@/components/CatatanBelumAktif";
-import { cariProdukContoh } from "@/lib/data-contoh";
+import { buatKlienServer } from "@/lib/supabase/server";
 import { formatRupiah } from "@/lib/format";
 
-// US-02: halaman ini masih memakai data contoh.
-// Tugas peserta: ambil satu produk dari Supabase berdasarkan id, di sisi server.
+export const dynamic = "force-dynamic";
+
+async function ambilProduk(id) {
+  if (!/^\d+$/.test(id)) {
+    return { produk: null, pesanError: null };
+  }
+
+  try {
+    const supabase = buatKlienServer();
+    const { data, error } = await supabase
+      .from("produk")
+      .select("id, nama, harga, deskripsi, foto_url, kategori")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Gagal mengambil detail produk:", error);
+      return {
+        produk: null,
+        pesanError:
+          "Gagal mengambil data produk dari database. Periksa koneksi dan pengaturan Supabase, lalu coba muat ulang halaman.",
+      };
+    }
+
+    return { produk: data, pesanError: null };
+  } catch (error) {
+    console.error("Kesalahan koneksi Supabase:", error);
+    return {
+      produk: null,
+      pesanError:
+        error instanceof Error && error.message.includes("Konfigurasi Supabase")
+          ? error.message
+          : "Terjadi kesalahan saat menghubungkan ke database. Periksa pengaturan Supabase di server.",
+    };
+  }
+}
+
 export default async function HalamanDetailProduk({ params }) {
   const { id } = await params;
-  const produk = cariProdukContoh(id);
+  const { produk, pesanError } = await ambilProduk(id);
+
+  if (pesanError) {
+    return (
+      <div className="flex flex-col items-start gap-4 py-12">
+        <Link href="/" className="text-sm text-teks-lembut underline underline-offset-4 hover:text-utama">
+          Kembali ke katalog
+        </Link>
+        <p
+          role="alert"
+          className="rounded-lg border border-bahaya/30 bg-bahaya/5 px-4 py-3 text-sm text-bahaya"
+        >
+          {pesanError}
+        </p>
+      </div>
+    );
+  }
 
   if (!produk) {
     notFound();
@@ -33,7 +83,6 @@ export default async function HalamanDetailProduk({ params }) {
         </p>
         <p className="max-w-prose leading-relaxed text-teks-lembut">{produk.deskripsi}</p>
         <TombolWhatsApp produk={produk} />
-        <CatatanBelumAktif>Tombol pesan belum berfungsi: lihat US-03.</CatatanBelumAktif>
       </div>
     </article>
   );
