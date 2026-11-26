@@ -8,22 +8,25 @@ export const dynamic = "force-dynamic";
 const URUT_VALID = ["termurah", "termahal", "terbaru"];
 const PRODUK_PER_HALAMAN = 12;
 
-async function ambilDaftarKategori(supabase) {
-  let { data, error } = await supabase.from("produk").select("kategori").eq("aktif", true);
+async function ambilRingkasanAktif(supabase) {
+  let { data, error } = await supabase.from("produk").select("id, kategori").eq("aktif", true);
   if (error && (error.code === "42703" || error.message?.includes("aktif"))) {
-    ({ data, error } = await supabase.from("produk").select("kategori"));
+    ({ data, error } = await supabase.from("produk").select("id, kategori"));
   }
-  if (error || !data) return [];
+  if (error || !data) {
+    return { daftarKategori: [], daftarIdAktif: [] };
+  }
 
-  const unik = [...new Set(data.map((item) => item.kategori).filter(Boolean))];
-  unik.sort((a, b) => a.localeCompare(b, "id"));
-  return unik;
+  const daftarKategori = [...new Set(data.map((item) => item.kategori).filter(Boolean))];
+  daftarKategori.sort((a, b) => a.localeCompare(b, "id"));
+  const daftarIdAktif = data.map((item) => String(item.id));
+  return { daftarKategori, daftarIdAktif };
 }
 
 async function ambilDaftarProduk({ urut, kategori, halaman }) {
   try {
     const supabase = buatKlienServer();
-    const daftarKategori = await ambilDaftarKategori(supabase);
+    const { daftarKategori, daftarIdAktif } = await ambilRingkasanAktif(supabase);
 
     const bangunQuery = (halamanTarget, { kolomOpsional = true, filterAktif = true } = {}) => {
       const awal = (halamanTarget - 1) * PRODUK_PER_HALAMAN;
@@ -86,6 +89,7 @@ async function ambilDaftarProduk({ urut, kategori, halaman }) {
       return {
         daftarProduk: [],
         daftarKategori,
+        daftarIdAktif,
         totalProduk: 0,
         totalHalaman: 1,
         halamanAktif: 1,
@@ -109,6 +113,7 @@ async function ambilDaftarProduk({ urut, kategori, halaman }) {
     return {
       daftarProduk: data ?? [],
       daftarKategori,
+      daftarIdAktif,
       totalProduk,
       totalHalaman,
       halamanAktif,
@@ -119,6 +124,7 @@ async function ambilDaftarProduk({ urut, kategori, halaman }) {
     return {
       daftarProduk: [],
       daftarKategori: [],
+      daftarIdAktif: [],
       totalProduk: 0,
       totalHalaman: 1,
       halamanAktif: 1,
@@ -138,12 +144,19 @@ export default async function HalamanKatalog({ searchParams }) {
   const halamanMentah = parseInt(typeof params?.halaman === "string" ? params.halaman : "1", 10);
   const halamanDiminta = Number.isFinite(halamanMentah) && halamanMentah >= 1 ? halamanMentah : 1;
 
-  const { daftarProduk, daftarKategori, totalProduk, totalHalaman, halamanAktif, pesanError } =
-    await ambilDaftarProduk({
-      urut: urutAktif,
-      kategori: kategoriAktif,
-      halaman: halamanDiminta,
-    });
+  const {
+    daftarProduk,
+    daftarKategori,
+    daftarIdAktif,
+    totalProduk,
+    totalHalaman,
+    halamanAktif,
+    pesanError,
+  } = await ambilDaftarProduk({
+    urut: urutAktif,
+    kategori: kategoriAktif,
+    halaman: halamanDiminta,
+  });
 
   return (
     <>
@@ -184,7 +197,7 @@ export default async function HalamanKatalog({ searchParams }) {
         )}
       </section>
 
-      <TerakhirDilihat />
+      <TerakhirDilihat daftarIdAktif={daftarIdAktif} />
     </>
   );
 }
