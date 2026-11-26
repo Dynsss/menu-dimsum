@@ -4,6 +4,7 @@ import { useActionState, useEffect, useState } from "react";
 import { buatDeskripsiAI } from "@/app/admin/actions";
 import Input from "@/components/Input";
 import Tombol from "@/components/Tombol";
+import { ambilDaftarFoto } from "@/lib/foto";
 
 const aksiBawaan = async () => ({ error: null });
 
@@ -19,7 +20,7 @@ export default function FormProduk({ produk = {}, action, labelTombol }) {
   const [deskripsi, setDeskripsi] = useState(produk.deskripsi ?? "");
   const [sedangBuatAI, setSedangBuatAI] = useState(false);
   const [errorAI, setErrorAI] = useState(null);
-  const [pratinjauFoto, setPratinjauFoto] = useState(null);
+  const [pratinjauFoto, setPratinjauFoto] = useState([]);
   const [errorFotoLokal, setErrorFotoLokal] = useState(null);
 
   useEffect(() => {
@@ -32,9 +33,7 @@ export default function FormProduk({ produk = {}, action, labelTombol }) {
 
   useEffect(() => {
     return () => {
-      if (pratinjauFoto) {
-        URL.revokeObjectURL(pratinjauFoto);
-      }
+      pratinjauFoto.forEach((url) => URL.revokeObjectURL(url));
     };
   }, [pratinjauFoto]);
 
@@ -63,37 +62,44 @@ export default function FormProduk({ produk = {}, action, labelTombol }) {
   }
 
   function tanganiPilihFoto(event) {
-    const file = event.target.files?.[0];
+    const files = Array.from(event.target.files ?? []);
 
-    if (pratinjauFoto) {
-      URL.revokeObjectURL(pratinjauFoto);
-    }
+    pratinjauFoto.forEach((url) => URL.revokeObjectURL(url));
 
-    if (!file) {
-      setPratinjauFoto(null);
+    if (files.length === 0) {
+      setPratinjauFoto([]);
       setErrorFotoLokal(null);
       return;
     }
 
-    const tipeValid = ["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.type);
-    if (!tipeValid) {
-      setErrorFotoLokal("Format foto harus berupa JPG, PNG, WebP, atau GIF.");
-      setPratinjauFoto(null);
+    if (files.length > 5) {
+      setErrorFotoLokal("Maksimal 5 foto per produk.");
+      setPratinjauFoto([]);
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      setErrorFotoLokal("Ukuran foto maksimal 5 MB.");
-      setPratinjauFoto(null);
-      return;
+    const tipeValid = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    for (const file of files) {
+      if (!tipeValid.includes(file.type)) {
+        setErrorFotoLokal("Format semua foto harus berupa JPG, PNG, WebP, atau GIF.");
+        setPratinjauFoto([]);
+        return;
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        setErrorFotoLokal("Ukuran setiap foto maksimal 5 MB.");
+        setPratinjauFoto([]);
+        return;
+      }
     }
 
     setErrorFotoLokal(null);
-    setPratinjauFoto(URL.createObjectURL(file));
+    setPratinjauFoto(files.map((file) => URL.createObjectURL(file)));
   }
 
   const nilai = state?.nilai ?? {};
-  const fotoDitampilkan = pratinjauFoto || produk.foto_url || null;
+  const daftarFotoLama = ambilDaftarFoto(produk.foto_url);
+  const fotoDitampilkan = pratinjauFoto.length > 0 ? pratinjauFoto : daftarFotoLama;
   const pesanError = errorFotoLokal || errorAI || state?.error;
 
   return (
@@ -127,25 +133,31 @@ export default function FormProduk({ produk = {}, action, labelTombol }) {
 
       <div className="flex flex-col gap-2">
         <label className="flex flex-col gap-1.5 text-sm font-semibold">
-          Foto produk
+          Foto produk (bisa pilih lebih dari satu)
           <input
             type="file"
             name="foto"
+            multiple
             accept="image/jpeg,image/png,image/webp,image/gif"
             onChange={tanganiPilihFoto}
-            required={!produk.foto_url}
+            required={daftarFotoLama.length === 0}
             className="w-full rounded-lg border border-garis bg-latar px-3 py-2 text-sm font-normal text-teks file:mr-3 file:rounded-md file:border-0 file:bg-permukaan file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-teks hover:file:bg-garis focus:border-utama focus:outline-none"
           />
         </label>
         <p className="text-xs text-teks-lembut">
-          Unggah gambar berformat JPG, PNG, WebP, atau GIF dengan ukuran maksimal 5 MB.
+          Unggah 1 sampai 5 gambar berformat JPG, PNG, WebP, atau GIF (maksimal 5 MB per foto). Foto pertama menjadi foto utama.
         </p>
-        {fotoDitampilkan && (
-          <img
-            src={fotoDitampilkan}
-            alt="Pratinjau foto produk"
-            className="h-32 w-32 rounded-xl border border-garis bg-permukaan object-cover"
-          />
+        {fotoDitampilkan.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {fotoDitampilkan.map((url, indeks) => (
+              <img
+                key={`${url}-${indeks}`}
+                src={url}
+                alt={`Pratinjau foto produk ${indeks + 1}`}
+                className="h-24 w-24 rounded-xl border border-garis bg-permukaan object-cover"
+              />
+            ))}
+          </div>
         )}
       </div>
 

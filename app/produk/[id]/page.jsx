@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import GaleriFotoProduk from "@/components/GaleriFotoProduk";
 import KartuProduk from "@/components/KartuProduk";
 import TombolWhatsApp from "@/components/TombolWhatsApp";
 import { buatKlienServer } from "@/lib/supabase/server";
 import { formatRupiah } from "@/lib/format";
+import { ambilDaftarFoto } from "@/lib/foto";
 
 export const dynamic = "force-dynamic";
 
@@ -86,14 +88,12 @@ export default async function HalamanDetailProduk({ params }) {
     }
   }
 
+  const daftarFoto = ambilDaftarFoto(produk.foto_url);
+
   return (
     <>
       <article className="grid gap-8 py-8 md:grid-cols-2 md:py-12">
-        <img
-          src={produk.foto_url}
-          alt={produk.nama}
-          className="aspect-square w-full rounded-2xl border border-garis bg-permukaan object-cover"
-        />
+        <GaleriFotoProduk daftarFoto={daftarFoto} nama={produk.nama} />
         <div className="flex flex-col gap-4">
           <Link href="/" className="text-sm text-teks-lembut underline underline-offset-4 hover:text-utama">
             Kembali ke katalog

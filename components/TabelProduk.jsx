@@ -1,8 +1,11 @@
 import { formatRupiah } from "@/lib/format";
+import { ambilFotoUtama } from "@/lib/foto";
 import Tombol from "@/components/Tombol";
 
 function FotoProduk({ fotoUrl, nama, ukuranKelas }) {
-  if (!fotoUrl) {
+  const fotoUtama = ambilFotoUtama(fotoUrl);
+
+  if (!fotoUtama) {
     return (
       <div
         className={`flex shrink-0 items-center justify-center rounded-lg border border-garis bg-permukaan text-xs text-teks-lembut ${ukuranKelas}`}
@@ -14,7 +17,7 @@ function FotoProduk({ fotoUrl, nama, ukuranKelas }) {
 
   return (
     <img
-      src={fotoUrl}
+      src={fotoUtama}
       alt={nama}
       className={`shrink-0 rounded-lg border border-garis bg-permukaan object-cover ${ukuranKelas}`}
     />
