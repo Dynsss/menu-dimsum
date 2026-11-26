@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
 /*
   Token desain. Ganti nilai di sini untuk menyesuaikan dengan usahamu.
@@ -42,6 +43,16 @@ html.dark {
 
   --color-bahaya: #dc2626;
   color-scheme: dark;
+}
+
+html.dark .text-utama,
+html.dark .hover\:text-utama:hover {
+  color: #52c997;
+}
+
+html.dark .text-bahaya,
+html.dark .hover\:text-bahaya:hover {
+  color: #f87171;
 }
 
 :focus-visible {

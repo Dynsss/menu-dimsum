@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import TombolBandingkan from "@/components/TombolBandingkan";
 import TombolFavorit from "@/components/TombolFavorit";
 import { useKeranjang } from "@/components/KeranjangProvider";
 import { dapatkanInfoHarga, formatRupiah } from "@/lib/format";
@@ -74,6 +75,7 @@ export default function KartuProduk({ produk }) {
         >
           {habis ? "Stok habis" : baruDitambah ? "Ditambahkan!" : "Tambah ke keranjang"}
         </button>
+        <TombolBandingkan produk={produk} />
         <TombolFavorit produk={produk} />
       </div>
     </article>

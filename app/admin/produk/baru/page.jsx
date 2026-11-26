@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 import NavAdmin from "@/components/NavAdmin";
 import FormProduk from "@/components/FormProduk";
 import { buatKlienSesi } from "@/lib/supabase/server";
-import { ambilPilihanKategoriAdmin, tambahProduk } from "@/app/admin/actions";
+import { tambahProduk } from "@/app/admin/actions";
+import { ambilPilihanKategoriAdmin } from "@/app/admin/kategori/actions";
 
 export const dynamic = "force-dynamic";
 

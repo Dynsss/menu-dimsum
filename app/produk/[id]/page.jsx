@@ -1,9 +1,11 @@
 import { cache } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import CatatTerakhirDilihat from "@/components/CatatTerakhirDilihat";
 import GaleriFotoProduk from "@/components/GaleriFotoProduk";
 import KartuProduk from "@/components/KartuProduk";
 import TombolBagikan from "@/components/TombolBagikan";
+import TombolBandingkan from "@/components/TombolBandingkan";
 import TombolFavorit from "@/components/TombolFavorit";
 import TombolWhatsApp from "@/components/TombolWhatsApp";
 import { buatKlienServer } from "@/lib/supabase/server";
@@ -13,6 +15,17 @@ import { toko } from "@/lib/toko";
 
 export const dynamic = "force-dynamic";
 
+function isKolomHilang(error) {
+  return Boolean(
+    error &&
+      (error.code === "42703" ||
+        error.message?.includes("stok") ||
+        error.message?.includes("harga_diskon") ||
+        error.message?.includes("badge") ||
+        error.message?.includes("aktif"))
+  );
+}
+
 const ambilProduk = cache(async function ambilProduk(id) {
   if (!/^\d+$/.test(id)) {
     return { produk: null, pesanError: null };
@@ -20,25 +33,22 @@ const ambilProduk = cache(async function ambilProduk(id) {
 
   try {
     const supabase = buatKlienServer();
-    let { data, error } = await supabase
-      .from("produk")
-      .select("id, nama, harga, harga_diskon, badge, deskripsi, foto_url, kategori, stok, aktif")
-      .eq("id", id)
-      .maybeSingle();
+    const daftarKolom = [
+      "id, nama, harga, harga_diskon, badge, deskripsi, foto_url, kategori, stok, aktif",
+      "id, nama, harga, deskripsi, foto_url, kategori, aktif",
+      "id, nama, harga, harga_diskon, badge, deskripsi, foto_url, kategori, stok",
+      "id, nama, harga, deskripsi, foto_url, kategori",
+    ];
 
-    if (
-      error &&
-      (error.code === "42703" ||
-        error.message?.includes("stok") ||
-        error.message?.includes("harga_diskon") ||
-        error.message?.includes("badge") ||
-        error.message?.includes("aktif"))
-    ) {
+    let data = null;
+    let error = null;
+    for (const kolom of daftarKolom) {
       ({ data, error } = await supabase
         .from("produk")
-        .select("id, nama, harga, deskripsi, foto_url, kategori")
+        .select(kolom)
         .eq("id", id)
         .maybeSingle());
+      if (!isKolomHilang(error)) break;
     }
 
     if (error) {
@@ -131,30 +141,28 @@ export default async function HalamanDetailProduk({ params }) {
   if (produk.kategori) {
     try {
       const supabase = buatKlienServer();
-      let { data, error } = await supabase
-        .from("produk")
-        .select("id, nama, harga, harga_diskon, badge, foto_url, kategori, stok")
-        .eq("kategori", produk.kategori)
-        .eq("aktif", true)
-        .neq("id", produk.id)
-        .order("id", { ascending: true })
-        .limit(3);
+      const kombinasiTerkait = [
+        { kolom: "id, nama, harga, harga_diskon, badge, foto_url, kategori, stok", filterAktif: true },
+        { kolom: "id, nama, harga, foto_url, kategori", filterAktif: true },
+        { kolom: "id, nama, harga, harga_diskon, badge, foto_url, kategori, stok", filterAktif: false },
+        { kolom: "id, nama, harga, foto_url, kategori", filterAktif: false },
+      ];
 
-      if (
-        error &&
-        (error.code === "42703" ||
-          error.message?.includes("stok") ||
-          error.message?.includes("harga_diskon") ||
-          error.message?.includes("badge") ||
-          error.message?.includes("aktif"))
-      ) {
-        ({ data, error } = await supabase
+      let data = null;
+      let error = null;
+      for (const { kolom, filterAktif } of kombinasiTerkait) {
+        let query = supabase
           .from("produk")
-          .select("id, nama, harga, foto_url, kategori")
+          .select(kolom)
           .eq("kategori", produk.kategori)
           .neq("id", produk.id)
           .order("id", { ascending: true })
-          .limit(3));
+          .limit(3);
+        if (filterAktif) {
+          query = query.eq("aktif", true);
+        }
+        ({ data, error } = await query);
+        if (!isKolomHilang(error)) break;
       }
 
       if (!error && data) {
@@ -171,6 +179,7 @@ export default async function HalamanDetailProduk({ params }) {
 
   return (
     <>
+      <CatatTerakhirDilihat produk={produk} />
       <article className="grid gap-8 py-8 md:grid-cols-2 md:py-12">
         <GaleriFotoProduk daftarFoto={daftarFoto} nama={produk.nama} />
         <div className="flex flex-col gap-4">
@@ -211,6 +220,7 @@ export default async function HalamanDetailProduk({ params }) {
           <TombolWhatsApp produk={produk} />
           <div className="flex flex-wrap items-center gap-3">
             <TombolFavorit produk={produk} varian="tombol" />
+            <TombolBandingkan produk={produk} varian="tombol" />
             <TombolBagikan namaProduk={produk.nama} />
           </div>
         </div>

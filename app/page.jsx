@@ -1,4 +1,5 @@
 import FilterKatalog from "@/app/FilterKatalog";
+import TerakhirDilihat from "@/components/TerakhirDilihat";
 import { buatKlienServer } from "@/lib/supabase/server";
 import { toko } from "@/lib/toko";
 
@@ -24,16 +25,16 @@ async function ambilDaftarProduk({ urut, kategori, halaman }) {
     const supabase = buatKlienServer();
     const daftarKategori = await ambilDaftarKategori(supabase);
 
-    const bangunQuery = (halamanTarget, sertakanKolomOpsional = true) => {
+    const bangunQuery = (halamanTarget, { kolomOpsional = true, filterAktif = true } = {}) => {
       const awal = (halamanTarget - 1) * PRODUK_PER_HALAMAN;
       const akhir = awal + PRODUK_PER_HALAMAN - 1;
-      const kolom = sertakanKolomOpsional
+      const kolom = kolomOpsional
         ? "id, nama, harga, harga_diskon, badge, foto_url, kategori, created_at, stok"
         : "id, nama, harga, foto_url, kategori, created_at";
 
       let query = supabase.from("produk").select(kolom, { count: "exact" });
 
-      if (sertakanKolomOpsional) {
+      if (filterAktif) {
         query = query.eq("aktif", true);
       }
 
@@ -54,19 +55,30 @@ async function ambilDaftarProduk({ urut, kategori, halaman }) {
       return query.range(awal, akhir);
     };
 
-    let sertakanKolomOpsional = true;
-    let { data, count, error } = await bangunQuery(halaman, sertakanKolomOpsional);
+    const isKolomHilang = (err) =>
+      Boolean(
+        err &&
+          (err.code === "42703" ||
+            err.message?.includes("stok") ||
+            err.message?.includes("harga_diskon") ||
+            err.message?.includes("badge") ||
+            err.message?.includes("aktif"))
+      );
 
-    if (
-      error &&
-      (error.code === "42703" ||
-        error.message?.includes("stok") ||
-        error.message?.includes("harga_diskon") ||
-        error.message?.includes("badge") ||
-        error.message?.includes("aktif"))
-    ) {
-      sertakanKolomOpsional = false;
-      ({ data, count, error } = await bangunQuery(halaman, false));
+    const kombinasi = [
+      { kolomOpsional: true, filterAktif: true },
+      { kolomOpsional: false, filterAktif: true },
+      { kolomOpsional: true, filterAktif: false },
+      { kolomOpsional: false, filterAktif: false },
+    ];
+
+    let opsiAktif = kombinasi[0];
+    let { data, count, error } = await bangunQuery(halaman, opsiAktif);
+
+    for (const opsiBerikutnya of kombinasi.slice(1)) {
+      if (!isKolomHilang(error)) break;
+      opsiAktif = opsiBerikutnya;
+      ({ data, count, error } = await bangunQuery(halaman, opsiAktif));
     }
 
     if (error) {
@@ -88,7 +100,7 @@ async function ambilDaftarProduk({ urut, kategori, halaman }) {
 
     if (halaman > totalHalaman && totalProduk > 0) {
       halamanAktif = totalHalaman;
-      const ulang = await bangunQuery(halamanAktif, sertakanKolomOpsional);
+      const ulang = await bangunQuery(halamanAktif, opsiAktif);
       if (!ulang.error) {
         data = ulang.data;
       }
@@ -171,6 +183,8 @@ export default async function HalamanKatalog({ searchParams }) {
           />
         )}
       </section>
+
+      <TerakhirDilihat />
     </>
   );
 }

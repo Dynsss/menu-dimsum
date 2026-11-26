@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import NavAdmin from "@/components/NavAdmin";
-import { ambilDaftarKategoriAdmin } from "@/app/admin/actions";
+import { ambilDaftarKategoriAdmin } from "./actions";
 import KelolaKategori from "./KelolaKategori";
 
 export const dynamic = "force-dynamic";

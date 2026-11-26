@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import NavAdmin from "@/components/NavAdmin";
 import FormProduk from "@/components/FormProduk";
-import { ambilPilihanKategoriAdmin, ubahProduk } from "@/app/admin/actions";
+import { ubahProduk } from "@/app/admin/actions";
+import { ambilPilihanKategoriAdmin } from "@/app/admin/kategori/actions";
 import { buatKlienSesi } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";

@@ -303,12 +303,12 @@ export async function ambilDaftarProdukAdmin(opsi = {}) {
   }
 }
 
-export async function tambahProduk(_stateSebelumnya, formData) {
+function validasiInputProduk(formData, { wajibFoto }) {
   const nama = String(formData.get("nama") ?? "").trim();
   const hargaTeks = String(formData.get("harga") ?? "").trim();
   const hargaDiskonTeks = String(formData.get("harga_diskon") ?? "").trim();
   const badgeTeks = String(formData.get("badge") ?? "").trim();
-  const stokTeks = String(formData.get("stok") ?? "0").trim();
+  const stokTeks = String(formData.get("stok") ?? "").trim();
   const kategori = String(formData.get("kategori") ?? "").trim();
   const deskripsi = String(formData.get("deskripsi") ?? "").trim();
   const daftarFoto = formData
@@ -325,80 +325,105 @@ export async function tambahProduk(_stateSebelumnya, formData) {
     deskripsi,
   };
 
+  const errorField = {};
+
+  if (!nama) {
+    errorField.nama = "Nama produk wajib diisi.";
+  }
+
+  const harga = Number(hargaTeks);
+  if (!hargaTeks || !Number.isFinite(harga) || !Number.isInteger(harga) || harga <= 0) {
+    errorField.harga = "Harga produk wajib berupa angka bulat lebih dari 0.";
+  }
+
+  let hargaDiskon = null;
+  if (hargaDiskonTeks !== "") {
+    const angkaDiskon = Number(hargaDiskonTeks);
+    if (
+      !Number.isFinite(angkaDiskon) ||
+      !Number.isInteger(angkaDiskon) ||
+      angkaDiskon <= 0 ||
+      (Number.isFinite(harga) && harga > 0 && angkaDiskon >= harga)
+    ) {
+      errorField.harga_diskon =
+        "Harga diskon harus berupa angka bulat lebih dari 0 dan lebih kecil dari harga normal.";
+    } else {
+      hargaDiskon = angkaDiskon;
+    }
+  }
+
+  const badge = ["Baru", "Terlaris"].includes(badgeTeks) ? badgeTeks : null;
+
+  const stokNilai = stokTeks === "" ? "0" : stokTeks;
+  const stok = Number(stokNilai);
+  if (!Number.isFinite(stok) || !Number.isInteger(stok) || stok < 0) {
+    errorField.stok = "Stok produk harus berupa angka bulat 0 atau lebih.";
+  }
+
+  if (!kategori) {
+    errorField.kategori = "Kategori produk wajib dipilih atau diisi.";
+  }
+
+  if (!deskripsi) {
+    errorField.deskripsi = "Deskripsi produk wajib diisi.";
+  }
+
+  if (wajibFoto && daftarFoto.length === 0) {
+    errorField.foto = "Foto produk wajib diunggah.";
+  } else if (daftarFoto.length > 5) {
+    errorField.foto = "Maksimal 5 foto per produk.";
+  } else {
+    for (const foto of daftarFoto) {
+      if (!TIPE_FOTO_DIIZINKAN.includes(foto.type)) {
+        errorField.foto = "Format semua foto harus berupa JPG, PNG, WebP, atau GIF.";
+        break;
+      }
+      if (foto.size > UKURAN_MAKSIMAL_FOTO) {
+        errorField.foto = "Ukuran setiap foto maksimal 5 MB.";
+        break;
+      }
+    }
+  }
+
+  return {
+    nilai,
+    errorField,
+    data: {
+      nama,
+      harga,
+      hargaDiskon,
+      badge,
+      stok,
+      kategori,
+      deskripsi,
+      daftarFoto,
+    },
+  };
+}
+
+export async function tambahProduk(_stateSebelumnya, formData) {
+  const { nilai, errorField, data } = validasiInputProduk(formData, { wajibFoto: true });
+
   try {
     const { supabase, user } = await dapatkanAdminSesi();
 
     if (!user || !supabase) {
       return {
         error: "Sesi login tidak ditemukan atau sudah berakhir. Silakan masuk kembali.",
+        errorField: {},
         nilai,
       };
     }
 
-    if (!nama) {
-      return { error: "Nama produk wajib diisi.", nilai };
-    }
-
-    const harga = Number(hargaTeks);
-    if (!hargaTeks || !Number.isFinite(harga) || !Number.isInteger(harga) || harga <= 0) {
+    if (Object.keys(errorField).length > 0) {
       return {
-        error: "Harga produk wajib diisi dengan angka bulat lebih dari 0.",
+        error: "Periksa kembali isian yang masih salah.",
+        errorField,
         nilai,
       };
     }
 
-    let hargaDiskon = null;
-    if (hargaDiskonTeks !== "") {
-      const angkaDiskon = Number(hargaDiskonTeks);
-      if (
-        !Number.isFinite(angkaDiskon) ||
-        !Number.isInteger(angkaDiskon) ||
-        angkaDiskon <= 0 ||
-        angkaDiskon >= harga
-      ) {
-        return {
-          error: "Harga diskon harus berupa angka bulat lebih dari 0 dan lebih kecil dari harga normal.",
-          nilai,
-        };
-      }
-      hargaDiskon = angkaDiskon;
-    }
-
-    const badge = ["Baru", "Terlaris"].includes(badgeTeks) ? badgeTeks : null;
-
-    const stok = Number(stokTeks);
-    if (stokTeks === "" || !Number.isFinite(stok) || !Number.isInteger(stok) || stok < 0) {
-      return {
-        error: "Stok produk wajib diisi dengan angka bulat 0 atau lebih.",
-        nilai,
-      };
-    }
-
-    if (!kategori) {
-      return { error: "Kategori produk wajib diisi.", nilai };
-    }
-
-    if (!deskripsi) {
-      return { error: "Deskripsi produk wajib diisi.", nilai };
-    }
-
-    if (daftarFoto.length === 0) {
-      return { error: "Foto produk wajib diunggah.", nilai };
-    }
-
-    if (daftarFoto.length > 5) {
-      return { error: "Maksimal 5 foto per produk.", nilai };
-    }
-
-    for (const foto of daftarFoto) {
-      if (!TIPE_FOTO_DIIZINKAN.includes(foto.type)) {
-        return { error: "Format semua foto harus berupa JPG, PNG, WebP, atau GIF.", nilai };
-      }
-
-      if (foto.size > UKURAN_MAKSIMAL_FOTO) {
-        return { error: "Ukuran setiap foto maksimal 5 MB.", nilai };
-      }
-    }
+    const { nama, harga, hargaDiskon, badge, stok, kategori, deskripsi, daftarFoto } = data;
 
     const namaBucket = process.env.SUPABASE_STORAGE_BUCKET || "produk";
     const supabaseStorage = buatKlienServer();
@@ -522,27 +547,7 @@ export async function tambahProduk(_stateSebelumnya, formData) {
 
 export async function ubahProduk(_stateSebelumnya, formData) {
   const id = String(formData.get("id") ?? "").trim();
-  const nama = String(formData.get("nama") ?? "").trim();
-  const hargaTeks = String(formData.get("harga") ?? "").trim();
-  const hargaDiskonTeks = String(formData.get("harga_diskon") ?? "").trim();
-  const badgeTeks = String(formData.get("badge") ?? "").trim();
-  const stokTeks = String(formData.get("stok") ?? "0").trim();
-  const kategori = String(formData.get("kategori") ?? "").trim();
-  const deskripsi = String(formData.get("deskripsi") ?? "").trim();
-  const fotoUrlLama = String(formData.get("foto_url_lama") ?? "").trim();
-  const daftarFoto = formData
-    .getAll("foto")
-    .filter((item) => item && typeof item !== "string" && item.size > 0);
-
-  const nilai = {
-    nama,
-    harga: hargaTeks,
-    harga_diskon: hargaDiskonTeks,
-    badge: badgeTeks,
-    stok: stokTeks,
-    kategori,
-    deskripsi,
-  };
+  const { nilai, errorField, data } = validasiInputProduk(formData, { wajibFoto: false });
 
   try {
     const { supabase, user } = await dapatkanAdminSesi();
@@ -550,74 +555,24 @@ export async function ubahProduk(_stateSebelumnya, formData) {
     if (!user || !supabase) {
       return {
         error: "Sesi login tidak ditemukan atau sudah berakhir. Silakan masuk kembali.",
+        errorField: {},
         nilai,
       };
     }
 
     if (!id || !/^\d+$/.test(id)) {
-      return { error: "ID produk tidak valid.", nilai };
+      return { error: "ID produk tidak valid.", errorField: {}, nilai };
     }
 
-    if (!nama) {
-      return { error: "Nama produk wajib diisi.", nilai };
-    }
-
-    const harga = Number(hargaTeks);
-    if (!hargaTeks || !Number.isFinite(harga) || !Number.isInteger(harga) || harga <= 0) {
+    if (Object.keys(errorField).length > 0) {
       return {
-        error: "Harga produk wajib diisi dengan angka bulat lebih dari 0.",
+        error: "Periksa kembali isian yang masih salah.",
+        errorField,
         nilai,
       };
     }
 
-    let hargaDiskon = null;
-    if (hargaDiskonTeks !== "") {
-      const angkaDiskon = Number(hargaDiskonTeks);
-      if (
-        !Number.isFinite(angkaDiskon) ||
-        !Number.isInteger(angkaDiskon) ||
-        angkaDiskon <= 0 ||
-        angkaDiskon >= harga
-      ) {
-        return {
-          error: "Harga diskon harus berupa angka bulat lebih dari 0 dan lebih kecil dari harga normal.",
-          nilai,
-        };
-      }
-      hargaDiskon = angkaDiskon;
-    }
-
-    const badge = ["Baru", "Terlaris"].includes(badgeTeks) ? badgeTeks : null;
-
-    const stok = Number(stokTeks);
-    if (stokTeks === "" || !Number.isFinite(stok) || !Number.isInteger(stok) || stok < 0) {
-      return {
-        error: "Stok produk wajib diisi dengan angka bulat 0 atau lebih.",
-        nilai,
-      };
-    }
-
-    if (!kategori) {
-      return { error: "Kategori produk wajib diisi.", nilai };
-    }
-
-    if (!deskripsi) {
-      return { error: "Deskripsi produk wajib diisi.", nilai };
-    }
-
-    if (daftarFoto.length > 5) {
-      return { error: "Maksimal 5 foto per produk.", nilai };
-    }
-
-    for (const foto of daftarFoto) {
-      if (!TIPE_FOTO_DIIZINKAN.includes(foto.type)) {
-        return { error: "Format semua foto harus berupa JPG, PNG, WebP, atau GIF.", nilai };
-      }
-
-      if (foto.size > UKURAN_MAKSIMAL_FOTO) {
-        return { error: "Ukuran setiap foto maksimal 5 MB.", nilai };
-      }
-    }
+    const { nama, harga, hargaDiskon, badge, stok, kategori, deskripsi, daftarFoto } = data;
 
     const dataUpdate = {
       nama,
@@ -804,253 +759,6 @@ export async function toggleAktifProduk(id, aktifSaatIni) {
   } catch (error) {
     console.error("Kesalahan saat mengubah status aktif produk:", error);
     return { error: "Terjadi kesalahan saat mengubah status produk." };
-  }
-}
-
-export async function ambilDaftarKategoriAdmin() {
-  try {
-    const { supabase, user } = await dapatkanAdminSesi();
-
-    if (!user || !supabase) {
-      return {
-        tidakTerautentikasi: true,
-        daftarKategori: [],
-        tabelBelumAda: false,
-        pesanError: "Sesi login telah berakhir. Silakan masuk kembali.",
-      };
-    }
-
-    const { data: dataKategori, error: errorKategori } = await supabase
-      .from("kategori")
-      .select("id, nama, created_at")
-      .order("nama", { ascending: true });
-
-    if (errorKategori) {
-      if (
-        errorKategori.code === "42P01" ||
-        errorKategori.message?.includes("does not exist") ||
-        errorKategori.message?.includes("schema cache")
-      ) {
-        return {
-          tidakTerautentikasi: false,
-          daftarKategori: [],
-          tabelBelumAda: true,
-          pesanError: null,
-        };
-      }
-
-      console.error("Gagal mengambil daftar kategori:", errorKategori);
-      return {
-        tidakTerautentikasi: false,
-        daftarKategori: [],
-        tabelBelumAda: false,
-        pesanError: "Gagal mengambil daftar kategori dari database.",
-      };
-    }
-
-    const { data: dataProduk } = await supabase.from("produk").select("kategori");
-    const hitungPerKategori = new Map();
-    (dataProduk ?? []).forEach((item) => {
-      const nama = item.kategori?.trim();
-      if (nama) {
-        hitungPerKategori.set(nama, (hitungPerKategori.get(nama) ?? 0) + 1);
-      }
-    });
-
-    const daftarKategori = (dataKategori ?? []).map((item) => ({
-      ...item,
-      jumlahProduk: hitungPerKategori.get(item.nama) ?? 0,
-    }));
-
-    return {
-      tidakTerautentikasi: false,
-      daftarKategori,
-      tabelBelumAda: false,
-      pesanError: null,
-    };
-  } catch (error) {
-    console.error("Kesalahan saat mengambil kategori:", error);
-    return {
-      tidakTerautentikasi: false,
-      daftarKategori: [],
-      tabelBelumAda: false,
-      pesanError: "Terjadi kesalahan saat menghubungkan ke database.",
-    };
-  }
-}
-
-export async function tambahKategori(_stateSebelumnya, formData) {
-  const nama = String(formData.get("nama") ?? "").trim();
-
-  try {
-    const { supabase, user } = await dapatkanAdminSesi();
-
-    if (!user || !supabase) {
-      return { error: "Sesi login telah berakhir. Silakan masuk kembali.", sukses: null };
-    }
-
-    if (!nama) {
-      return { error: "Nama kategori wajib diisi.", sukses: null };
-    }
-
-    const { error } = await supabase.from("kategori").insert({ nama });
-
-    if (error) {
-      if (error.code === "23505") {
-        return { error: `Kategori "${nama}" sudah ada.`, sukses: null };
-      }
-      console.error("Gagal menambah kategori:", error);
-      return { error: "Gagal menambahkan kategori ke database.", sukses: null };
-    }
-
-    revalidatePath("/admin/kategori");
-    revalidatePath("/admin/produk/baru");
-    revalidatePath("/admin");
-    return { error: null, sukses: `Kategori "${nama}" berhasil ditambahkan.` };
-  } catch (error) {
-    console.error("Kesalahan saat menambah kategori:", error);
-    return { error: "Terjadi kesalahan saat menambahkan kategori.", sukses: null };
-  }
-}
-
-export async function ubahKategori(_stateSebelumnya, formData) {
-  const id = String(formData.get("id") ?? "").trim();
-  const namaBaru = String(formData.get("nama") ?? "").trim();
-
-  try {
-    const { supabase, user } = await dapatkanAdminSesi();
-
-    if (!user || !supabase) {
-      return { error: "Sesi login telah berakhir. Silakan masuk kembali.", sukses: null };
-    }
-
-    if (!id || !/^\d+$/.test(id)) {
-      return { error: "ID kategori tidak valid.", sukses: null };
-    }
-
-    if (!namaBaru) {
-      return { error: "Nama kategori tidak boleh kosong.", sukses: null };
-    }
-
-    const { data: kategoriLama, error: errorAmbil } = await supabase
-      .from("kategori")
-      .select("id, nama")
-      .eq("id", id)
-      .maybeSingle();
-
-    if (errorAmbil || !kategoriLama) {
-      return { error: "Kategori tidak ditemukan.", sukses: null };
-    }
-
-    const { error: errorUpdate } = await supabase
-      .from("kategori")
-      .update({ nama: namaBaru })
-      .eq("id", id);
-
-    if (errorUpdate) {
-      if (errorUpdate.code === "23505") {
-        return { error: `Kategori "${namaBaru}" sudah ada.`, sukses: null };
-      }
-      console.error("Gagal mengubah kategori:", errorUpdate);
-      return { error: "Gagal mengubah nama kategori.", sukses: null };
-    }
-
-    if (kategoriLama.nama !== namaBaru) {
-      await supabase
-        .from("produk")
-        .update({ kategori: namaBaru })
-        .eq("kategori", kategoriLama.nama);
-    }
-
-    revalidatePath("/");
-    revalidatePath("/admin");
-    revalidatePath("/admin/kategori");
-    revalidatePath("/admin/produk/baru");
-    return { error: null, sukses: `Kategori berhasil diubah menjadi "${namaBaru}".` };
-  } catch (error) {
-    console.error("Kesalahan saat mengubah kategori:", error);
-    return { error: "Terjadi kesalahan saat mengubah kategori.", sukses: null };
-  }
-}
-
-export async function hapusKategori(_stateSebelumnya, formData) {
-  const id = String(formData.get("id") ?? "").trim();
-
-  try {
-    const { supabase, user } = await dapatkanAdminSesi();
-
-    if (!user || !supabase) {
-      return { error: "Sesi login telah berakhir. Silakan masuk kembali.", sukses: null };
-    }
-
-    if (!id || !/^\d+$/.test(id)) {
-      return { error: "ID kategori tidak valid.", sukses: null };
-    }
-
-    const { data: kategori, error: errorAmbil } = await supabase
-      .from("kategori")
-      .select("id, nama")
-      .eq("id", id)
-      .maybeSingle();
-
-    if (errorAmbil || !kategori) {
-      return { error: "Kategori tidak ditemukan.", sukses: null };
-    }
-
-    const { count, error: errorHitung } = await supabase
-      .from("produk")
-      .select("id", { count: "exact", head: true })
-      .eq("kategori", kategori.nama);
-
-    if (errorHitung) {
-      console.error("Gagal memeriksa pemakaian kategori:", errorHitung);
-      return { error: "Gagal memeriksa apakah kategori masih dipakai produk.", sukses: null };
-    }
-
-    if ((count ?? 0) > 0) {
-      return {
-        error: `Kategori "${kategori.nama}" masih dipakai oleh ${count} produk dan tidak dapat dihapus.`,
-        sukses: null,
-      };
-    }
-
-    const { error: errorHapus } = await supabase.from("kategori").delete().eq("id", id);
-
-    if (errorHapus) {
-      console.error("Gagal menghapus kategori:", errorHapus);
-      return { error: "Gagal menghapus kategori dari database.", sukses: null };
-    }
-
-    revalidatePath("/admin/kategori");
-    revalidatePath("/admin/produk/baru");
-    revalidatePath("/admin");
-    return { error: null, sukses: `Kategori "${kategori.nama}" berhasil dihapus.` };
-  } catch (error) {
-    console.error("Kesalahan saat menghapus kategori:", error);
-    return { error: "Terjadi kesalahan saat menghapus kategori.", sukses: null };
-  }
-}
-
-export async function ambilPilihanKategoriAdmin() {
-  try {
-    const { supabase, user } = await dapatkanAdminSesi();
-    if (!user || !supabase) return [];
-
-    const { data, error } = await supabase
-      .from("kategori")
-      .select("nama")
-      .order("nama", { ascending: true });
-
-    if (!error && data && data.length > 0) {
-      return data.map((item) => item.nama).filter(Boolean);
-    }
-
-    const { data: dataProduk } = await supabase.from("produk").select("kategori");
-    const unik = [...new Set((dataProduk ?? []).map((item) => item.kategori?.trim()).filter(Boolean))];
-    unik.sort((a, b) => a.localeCompare(b, "id"));
-    return unik;
-  } catch {
-    return [];
   }
 }
 

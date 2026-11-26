@@ -1,6 +1,8 @@
 import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { BandingkanProvider } from "@/components/BandingkanProvider";
+import BilahBandingkan from "@/components/BilahBandingkan";
 import { FavoritProvider } from "@/components/FavoritProvider";
 import { KeranjangProvider } from "@/components/KeranjangProvider";
 import PwaRegister from "@/components/PwaRegister";
@@ -57,9 +59,12 @@ export default function RootLayout({ children }) {
         <PwaRegister />
         <FavoritProvider>
           <KeranjangProvider>
-            <Header />
-            <main className="mx-auto w-full max-w-5xl flex-1 px-4">{children}</main>
-            <Footer />
+            <BandingkanProvider>
+              <Header />
+              <main className="mx-auto w-full max-w-5xl flex-1 px-4">{children}</main>
+              <Footer />
+              <BilahBandingkan />
+            </BandingkanProvider>
           </KeranjangProvider>
         </FavoritProvider>
       </body>

@@ -6,16 +6,38 @@ import Input from "@/components/Input";
 import Tombol from "@/components/Tombol";
 import { ambilDaftarFoto } from "@/lib/foto";
 
-const aksiBawaan = async () => ({ error: null });
+const aksiBawaan = async () => ({ error: null, errorField: {} });
+
+function ErrorField({ pesan }) {
+  if (!pesan) return null;
+  return (
+    <p role="alert" className="text-xs font-medium text-bahaya">
+      {pesan}
+    </p>
+  );
+}
 
 // Dipakai untuk tambah produk (US-08) dan ubah produk (US-09).
 // Nama field sama dengan kolom tabel "produk".
 export default function FormProduk({ produk = {}, daftarKategori = [], action, labelTombol }) {
   const [state, formAction, sedangMemproses] = useActionState(action ?? aksiBawaan, {
     error: null,
+    errorField: {},
     nilai: null,
   });
   const [nama, setNama] = useState(produk.nama ?? "");
+  const [harga, setHarga] = useState(
+    produk.harga !== undefined && produk.harga !== null ? String(produk.harga) : ""
+  );
+  const [hargaDiskon, setHargaDiskon] = useState(
+    produk.harga_diskon !== undefined && produk.harga_diskon !== null
+      ? String(produk.harga_diskon)
+      : ""
+  );
+  const [badge, setBadge] = useState(produk.badge ?? "");
+  const [stok, setStok] = useState(
+    produk.stok !== undefined && produk.stok !== null ? String(produk.stok) : "10"
+  );
   const [kategori, setKategori] = useState(produk.kategori ?? "");
   const [deskripsi, setDeskripsi] = useState(produk.deskripsi ?? "");
   const [sedangBuatAI, setSedangBuatAI] = useState(false);
@@ -26,6 +48,10 @@ export default function FormProduk({ produk = {}, daftarKategori = [], action, l
   useEffect(() => {
     if (state?.nilai) {
       setNama(state.nilai.nama ?? "");
+      setHarga(state.nilai.harga ?? "");
+      setHargaDiskon(state.nilai.harga_diskon ?? "");
+      setBadge(state.nilai.badge ?? "");
+      setStok(state.nilai.stok ?? "10");
       setKategori(state.nilai.kategori ?? "");
       setDeskripsi(state.nilai.deskripsi ?? "");
     }
@@ -97,9 +123,9 @@ export default function FormProduk({ produk = {}, daftarKategori = [], action, l
     setPratinjauFoto(files.map((file) => URL.createObjectURL(file)));
   }
 
-  const nilai = state?.nilai ?? {};
   const daftarFotoLama = ambilDaftarFoto(produk.foto_url);
   const fotoDitampilkan = pratinjauFoto.length > 0 ? pratinjauFoto : daftarFotoLama;
+  const errorField = state?.errorField ?? {};
   const pesanError = errorFotoLokal || errorAI || state?.error;
 
   const pilihanKategori = [...daftarKategori];
@@ -109,39 +135,54 @@ export default function FormProduk({ produk = {}, daftarKategori = [], action, l
   }
 
   return (
-    <form action={formAction} className="flex max-w-xl flex-col gap-4">
-      <Input
-        label="Nama produk"
-        name="nama"
-        value={nama}
-        onChange={(e) => setNama(e.target.value)}
-        placeholder="Contoh: Dimsum Ayam Udang (4 pcs)"
-        required
-      />
-      <Input
-        label="Harga (Rp)"
-        name="harga"
-        type="number"
-        min="1"
-        step="1"
-        defaultValue={nilai.harga ?? produk.harga ?? ""}
-        placeholder="Contoh: 18000"
-        required
-      />
-      <Input
-        label="Harga diskon (Rp, opsional)"
-        name="harga_diskon"
-        type="number"
-        min="0"
-        step="1"
-        defaultValue={nilai.harga_diskon ?? produk.harga_diskon ?? ""}
-        placeholder="Kosongkan jika tidak sedang diskon"
-      />
+    <form action={formAction} noValidate className="flex max-w-xl flex-col gap-4">
+      <div className="flex flex-col gap-1">
+        <Input
+          label="Nama produk"
+          name="nama"
+          value={nama}
+          onChange={(e) => setNama(e.target.value)}
+          placeholder="Contoh: Dimsum Ayam Udang (4 pcs)"
+          required
+        />
+        <ErrorField pesan={errorField.nama} />
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <Input
+          label="Harga (Rp)"
+          name="harga"
+          type="number"
+          min="1"
+          step="1"
+          value={harga}
+          onChange={(e) => setHarga(e.target.value)}
+          placeholder="Contoh: 18000"
+          required
+        />
+        <ErrorField pesan={errorField.harga} />
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <Input
+          label="Harga diskon (Rp, opsional)"
+          name="harga_diskon"
+          type="number"
+          min="0"
+          step="1"
+          value={hargaDiskon}
+          onChange={(e) => setHargaDiskon(e.target.value)}
+          placeholder="Kosongkan jika tidak sedang diskon"
+        />
+        <ErrorField pesan={errorField.harga_diskon} />
+      </div>
+
       <label className="flex flex-col gap-1.5 text-sm font-semibold">
         Badge produk (opsional)
         <select
           name="badge"
-          defaultValue={nilai.badge ?? produk.badge ?? ""}
+          value={badge}
+          onChange={(e) => setBadge(e.target.value)}
           className="w-full rounded-lg border border-garis bg-latar px-3 py-2.5 text-base font-normal text-teks focus:border-utama focus:outline-none"
         >
           <option value="">Tanpa badge</option>
@@ -149,17 +190,23 @@ export default function FormProduk({ produk = {}, daftarKategori = [], action, l
           <option value="Terlaris">Terlaris</option>
         </select>
       </label>
-      <Input
-        label="Stok"
-        name="stok"
-        type="number"
-        min="0"
-        step="1"
-        defaultValue={nilai.stok ?? produk.stok ?? 10}
-        placeholder="Contoh: 10 (isi 0 jika habis)"
-        required
-      />
-      {pilihanKategori.length > 0 ? (
+
+      <div className="flex flex-col gap-1">
+        <Input
+          label="Stok"
+          name="stok"
+          type="number"
+          min="0"
+          step="1"
+          value={stok}
+          onChange={(e) => setStok(e.target.value)}
+          placeholder="Contoh: 10 (isi 0 jika habis)"
+          required
+        />
+        <ErrorField pesan={errorField.stok} />
+      </div>
+
+      <div className="flex flex-col gap-1">
         <label className="flex flex-col gap-1.5 text-sm font-semibold">
           Kategori
           <select
@@ -169,7 +216,11 @@ export default function FormProduk({ produk = {}, daftarKategori = [], action, l
             required
             className="w-full rounded-lg border border-garis bg-latar px-3 py-2.5 text-base font-normal text-teks focus:border-utama focus:outline-none"
           >
-            <option value="">Pilih kategori...</option>
+            <option value="">
+              {pilihanKategori.length > 0
+                ? "Pilih kategori..."
+                : "Belum ada kategori — tambah di Kelola kategori"}
+            </option>
             {pilihanKategori.map((item) => (
               <option key={item} value={item}>
                 {item}
@@ -177,16 +228,8 @@ export default function FormProduk({ produk = {}, daftarKategori = [], action, l
             ))}
           </select>
         </label>
-      ) : (
-        <Input
-          label="Kategori"
-          name="kategori"
-          value={kategori}
-          onChange={(e) => setKategori(e.target.value)}
-          placeholder="Contoh: Dimsum Kukus"
-          required
-        />
-      )}
+        <ErrorField pesan={errorField.kategori} />
+      </div>
 
       <div className="flex flex-col gap-2">
         <label className="flex flex-col gap-1.5 text-sm font-semibold">
@@ -201,6 +244,7 @@ export default function FormProduk({ produk = {}, daftarKategori = [], action, l
             className="w-full rounded-lg border border-garis bg-latar px-3 py-2 text-sm font-normal text-teks file:mr-3 file:rounded-md file:border-0 file:bg-permukaan file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-teks hover:file:bg-garis focus:border-utama focus:outline-none"
           />
         </label>
+        <ErrorField pesan={errorFotoLokal || errorField.foto} />
         <p className="text-xs text-teks-lembut">
           Unggah 1 sampai 5 gambar berformat JPG, PNG, WebP, atau GIF (maksimal 5 MB per foto). Foto pertama menjadi foto utama.
         </p>
@@ -242,6 +286,7 @@ export default function FormProduk({ produk = {}, daftarKategori = [], action, l
           required
           className="w-full rounded-lg border border-garis bg-latar px-3 py-2.5 text-base text-teks placeholder:text-teks-lembut focus:border-utama focus:outline-none"
         />
+        <ErrorField pesan={errorField.deskripsi} />
         <p className="text-xs text-teks-lembut">
           Isi nama produk dan kategori, lalu klik tombol di atas untuk membuat deskripsi otomatis dengan Gemini AI.
         </p>

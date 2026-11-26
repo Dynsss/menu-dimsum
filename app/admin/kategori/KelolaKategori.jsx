@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
-import { hapusKategori, tambahKategori, ubahKategori } from "@/app/admin/actions";
+import { hapusKategori, tambahKategori, ubahKategori } from "./actions";
 import Tombol from "@/components/Tombol";
 
 const stateAwal = { error: null, sukses: null };
