@@ -78,6 +78,64 @@ export async function keluarAdmin() {
   redirect("/admin/login");
 }
 
+export async function gantiPassword(_stateSebelumnya, formData) {
+  const passwordBaru = String(formData.get("password_baru") ?? "");
+  const konfirmasiPassword = String(formData.get("konfirmasi_password") ?? "");
+
+  try {
+    const { supabase, user } = await dapatkanAdminSesi();
+
+    if (!user || !supabase) {
+      return {
+        error: "Sesi login tidak ditemukan atau sudah berakhir. Silakan masuk kembali.",
+        sukses: null,
+      };
+    }
+
+    if (!passwordBaru || passwordBaru.length < 8) {
+      return {
+        error: "Password baru minimal 8 karakter.",
+        sukses: null,
+      };
+    }
+
+    if (passwordBaru !== konfirmasiPassword) {
+      return {
+        error: "Password baru dan konfirmasi password tidak sama.",
+        sukses: null,
+      };
+    }
+
+    const { error } = await supabase.auth.updateUser({
+      password: passwordBaru,
+    });
+
+    if (error) {
+      console.error("Gagal mengganti password admin:", error);
+      return {
+        error:
+          error.message ||
+          "Gagal mengganti password. Pastikan password baru memenuhi ketentuan lalu coba lagi.",
+        sukses: null,
+      };
+    }
+
+    return {
+      error: null,
+      sukses: "Password berhasil diperbarui.",
+    };
+  } catch (error) {
+    console.error("Kesalahan saat mengganti password:", error);
+    return {
+      error:
+        error instanceof Error && error.message.includes("Konfigurasi Supabase")
+          ? error.message
+          : "Terjadi kesalahan saat mengganti password. Periksa koneksi dan pengaturan Supabase.",
+      sukses: null,
+    };
+  }
+}
+
 export async function ambilDaftarProdukAdmin() {
   try {
     const { supabase, user } = await dapatkanAdminSesi();
