@@ -150,7 +150,7 @@ export async function ambilDaftarProdukAdmin() {
 
     let { data, error } = await supabase
       .from("produk")
-      .select("id, nama, harga, harga_diskon, badge, deskripsi, foto_url, kategori, stok, created_at")
+      .select("id, nama, harga, harga_diskon, badge, deskripsi, foto_url, kategori, stok, aktif, created_at")
       .order("id", { ascending: true });
 
     if (
@@ -158,7 +158,8 @@ export async function ambilDaftarProdukAdmin() {
       (error.code === "42703" ||
         error.message?.includes("stok") ||
         error.message?.includes("harga_diskon") ||
-        error.message?.includes("badge"))
+        error.message?.includes("badge") ||
+        error.message?.includes("aktif"))
     ) {
       ({ data, error } = await supabase
         .from("produk")
@@ -619,6 +620,49 @@ export async function ubahProduk(_stateSebelumnya, formData) {
   revalidatePath(`/produk/${id}`);
   revalidatePath("/admin");
   redirect("/admin?status=ubah-berhasil");
+}
+
+export async function toggleAktifProduk(id, aktifSaatIni) {
+  try {
+    const { supabase, user } = await dapatkanAdminSesi();
+
+    if (!user || !supabase) {
+      return {
+        tidakTerautentikasi: true,
+        error: "Sesi login tidak ditemukan atau sudah berakhir. Silakan masuk kembali.",
+      };
+    }
+
+    const idTeks = String(id ?? "").trim();
+    if (!idTeks || !/^\d+$/.test(idTeks)) {
+      return { error: "ID produk tidak valid." };
+    }
+
+    const aktifBaru = !Boolean(aktifSaatIni);
+    const { error } = await supabase
+      .from("produk")
+      .update({ aktif: aktifBaru })
+      .eq("id", idTeks);
+
+    if (error) {
+      if (error.code === "42703" || error.message?.includes("aktif")) {
+        return {
+          error: "Kolom 'aktif' belum ada di tabel produk. Jalankan SQL migrasi di Supabase terlebih dahulu.",
+        };
+      }
+      console.error("Gagal mengubah status aktif produk:", error);
+      return { error: "Gagal mengubah status produk di database." };
+    }
+
+    revalidatePath("/");
+    revalidatePath(`/produk/${idTeks}`);
+    revalidatePath("/admin");
+    revalidatePath("/sitemap.xml");
+    return { error: null, aktifBaru };
+  } catch (error) {
+    console.error("Kesalahan saat mengubah status aktif produk:", error);
+    return { error: "Terjadi kesalahan saat mengubah status produk." };
+  }
 }
 
 export async function ambilDaftarKategoriAdmin() {

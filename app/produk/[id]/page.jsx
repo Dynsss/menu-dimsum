@@ -22,7 +22,7 @@ const ambilProduk = cache(async function ambilProduk(id) {
     const supabase = buatKlienServer();
     let { data, error } = await supabase
       .from("produk")
-      .select("id, nama, harga, harga_diskon, badge, deskripsi, foto_url, kategori, stok")
+      .select("id, nama, harga, harga_diskon, badge, deskripsi, foto_url, kategori, stok, aktif")
       .eq("id", id)
       .maybeSingle();
 
@@ -31,7 +31,8 @@ const ambilProduk = cache(async function ambilProduk(id) {
       (error.code === "42703" ||
         error.message?.includes("stok") ||
         error.message?.includes("harga_diskon") ||
-        error.message?.includes("badge"))
+        error.message?.includes("badge") ||
+        error.message?.includes("aktif"))
     ) {
       ({ data, error } = await supabase
         .from("produk")
@@ -47,6 +48,10 @@ const ambilProduk = cache(async function ambilProduk(id) {
         pesanError:
           "Gagal mengambil data produk dari database. Periksa koneksi dan pengaturan Supabase, lalu coba muat ulang halaman.",
       };
+    }
+
+    if (data && data.aktif === false) {
+      return { produk: null, pesanError: null };
     }
 
     return { produk: data, pesanError: null };
@@ -130,6 +135,7 @@ export default async function HalamanDetailProduk({ params }) {
         .from("produk")
         .select("id, nama, harga, harga_diskon, badge, foto_url, kategori, stok")
         .eq("kategori", produk.kategori)
+        .eq("aktif", true)
         .neq("id", produk.id)
         .order("id", { ascending: true })
         .limit(3);
@@ -139,7 +145,8 @@ export default async function HalamanDetailProduk({ params }) {
         (error.code === "42703" ||
           error.message?.includes("stok") ||
           error.message?.includes("harga_diskon") ||
-          error.message?.includes("badge"))
+          error.message?.includes("badge") ||
+          error.message?.includes("aktif"))
       ) {
         ({ data, error } = await supabase
           .from("produk")

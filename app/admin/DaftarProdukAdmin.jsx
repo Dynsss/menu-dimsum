@@ -60,6 +60,17 @@ export default function DaftarProdukAdmin({
     setKategoriDipilih("");
   }
 
+  function tanganiToggleAktif(idProduk, aktifBaru) {
+    setDaftarProduk((prev) =>
+      prev.map((item) =>
+        String(item.id) === String(idProduk) ? { ...item, aktif: aktifBaru } : item
+      )
+    );
+    setNotifikasi(
+      aktifBaru ? "Produk berhasil diaktifkan." : "Produk berhasil dinonaktifkan."
+    );
+  }
+
   return (
     <div className="flex flex-col gap-4">
       {notifikasi && (
@@ -164,7 +175,7 @@ export default function DaftarProdukAdmin({
       )}
 
       {!sedangMemuat && !pesanError && produkTersaring.length > 0 && (
-        <TabelProduk daftarProduk={produkTersaring} />
+        <TabelProduk daftarProduk={produkTersaring} onToggleAktif={tanganiToggleAktif} />
       )}
     </div>
   );

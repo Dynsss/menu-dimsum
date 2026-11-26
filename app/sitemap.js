@@ -31,10 +31,18 @@ export default async function sitemap() {
 
   try {
     const supabase = buatKlienServer();
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from("produk")
       .select("id, created_at")
+      .eq("aktif", true)
       .order("id", { ascending: true });
+
+    if (error && (error.code === "42703" || error.message?.includes("aktif"))) {
+      ({ data, error } = await supabase
+        .from("produk")
+        .select("id, created_at")
+        .order("id", { ascending: true }));
+    }
 
     if (error || !data) {
       return halamanStatis;

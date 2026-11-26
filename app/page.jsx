@@ -8,7 +8,10 @@ const URUT_VALID = ["termurah", "termahal", "terbaru"];
 const PRODUK_PER_HALAMAN = 12;
 
 async function ambilDaftarKategori(supabase) {
-  const { data, error } = await supabase.from("produk").select("kategori");
+  let { data, error } = await supabase.from("produk").select("kategori").eq("aktif", true);
+  if (error && (error.code === "42703" || error.message?.includes("aktif"))) {
+    ({ data, error } = await supabase.from("produk").select("kategori"));
+  }
   if (error || !data) return [];
 
   const unik = [...new Set(data.map((item) => item.kategori).filter(Boolean))];
@@ -29,6 +32,10 @@ async function ambilDaftarProduk({ urut, kategori, halaman }) {
         : "id, nama, harga, foto_url, kategori, created_at";
 
       let query = supabase.from("produk").select(kolom, { count: "exact" });
+
+      if (sertakanKolomOpsional) {
+        query = query.eq("aktif", true);
+      }
 
       if (kategori) {
         query = query.eq("kategori", kategori);
@@ -55,7 +62,8 @@ async function ambilDaftarProduk({ urut, kategori, halaman }) {
       (error.code === "42703" ||
         error.message?.includes("stok") ||
         error.message?.includes("harga_diskon") ||
-        error.message?.includes("badge"))
+        error.message?.includes("badge") ||
+        error.message?.includes("aktif"))
     ) {
       sertakanKolomOpsional = false;
       ({ data, count, error } = await bangunQuery(halaman, false));

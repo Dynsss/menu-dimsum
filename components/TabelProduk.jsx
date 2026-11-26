@@ -1,6 +1,7 @@
 import { dapatkanInfoHarga, formatRupiah } from "@/lib/format";
 import { ambilFotoUtama } from "@/lib/foto";
 import Tombol from "@/components/Tombol";
+import TombolAktifProduk from "@/components/TombolAktifProduk";
 
 function FotoProduk({ fotoUrl, nama, ukuranKelas }) {
   const fotoUtama = ambilFotoUtama(fotoUrl);
@@ -24,17 +25,18 @@ function FotoProduk({ fotoUrl, nama, ukuranKelas }) {
   );
 }
 
-export default function TabelProduk({ daftarProduk }) {
+export default function TabelProduk({ daftarProduk, onToggleAktif }) {
   return (
     <>
       {/* Tampilan kartu untuk layar mobile */}
       <div className="flex flex-col gap-3 md:hidden">
         {daftarProduk.map((produk) => {
           const { adaDiskon, hargaAktif, hargaCoret } = dapatkanInfoHarga(produk);
+          const nonaktif = produk.aktif === false;
           return (
             <article
               key={produk.id}
-              className="flex flex-col gap-3 rounded-2xl border border-garis bg-latar p-4"
+              className={`flex flex-col gap-3 rounded-2xl border border-garis bg-latar p-4 ${nonaktif ? "opacity-70" : ""}`}
             >
               <div className="flex items-start gap-3">
                 <FotoProduk fotoUrl={produk.foto_url} nama={produk.nama} ukuranKelas="h-16 w-16" />
@@ -44,6 +46,11 @@ export default function TabelProduk({ daftarProduk }) {
                       #{produk.id}
                     </span>
                     <span>{produk.kategori || "Tanpa kategori"}</span>
+                    {nonaktif && (
+                      <span className="rounded bg-bahaya/10 px-1.5 py-0.5 font-bold text-bahaya">
+                        Nonaktif
+                      </span>
+                    )}
                     {produk.badge && (
                       <span
                         className={`rounded px-1.5 py-0.5 font-bold text-white ${
@@ -81,7 +88,12 @@ export default function TabelProduk({ daftarProduk }) {
               <p className="text-sm leading-relaxed text-teks-lembut">
                 {produk.deskripsi || "Tidak ada deskripsi."}
               </p>
-              <div className="flex gap-2 pt-1">
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <TombolAktifProduk
+                  id={produk.id}
+                  aktif={produk.aktif !== false}
+                  onBerhasil={onToggleAktif}
+                />
                 {/* US-09 dan US-10 (bonus): ubah dan hapus produk */}
                 <Tombol href={`/admin/produk/${produk.id}/ubah`} varian="garis" className="flex-1">
                   Ubah
@@ -112,8 +124,12 @@ export default function TabelProduk({ daftarProduk }) {
           <tbody>
             {daftarProduk.map((produk) => {
               const { adaDiskon, hargaAktif, hargaCoret } = dapatkanInfoHarga(produk);
+              const nonaktif = produk.aktif === false;
               return (
-                <tr key={produk.id} className="border-t border-garis align-top">
+                <tr
+                  key={produk.id}
+                  className={`border-t border-garis align-top ${nonaktif ? "opacity-70" : ""}`}
+                >
                   <td className="px-4 py-3 font-semibold text-teks-lembut">#{produk.id}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-start gap-3">
@@ -125,6 +141,11 @@ export default function TabelProduk({ daftarProduk }) {
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="font-semibold text-teks">{produk.nama}</p>
+                          {nonaktif && (
+                            <span className="rounded bg-bahaya/10 px-1.5 py-0.5 text-xs font-bold text-bahaya">
+                              Nonaktif
+                            </span>
+                          )}
                           {produk.badge && (
                             <span
                               className={`rounded px-1.5 py-0.5 text-xs font-bold text-white ${
@@ -168,7 +189,12 @@ export default function TabelProduk({ daftarProduk }) {
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex justify-end gap-2">
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      <TombolAktifProduk
+                        id={produk.id}
+                        aktif={produk.aktif !== false}
+                        onBerhasil={onToggleAktif}
+                      />
                       {/* US-09 dan US-10 (bonus): ubah dan hapus produk */}
                       <Tombol href={`/admin/produk/${produk.id}/ubah`} varian="garis">
                         Ubah
