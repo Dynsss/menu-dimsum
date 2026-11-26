@@ -288,6 +288,161 @@ export async function tambahProduk(_stateSebelumnya, formData) {
   redirect("/admin?status=tambah-berhasil");
 }
 
+export async function ubahProduk(_stateSebelumnya, formData) {
+  const id = String(formData.get("id") ?? "").trim();
+  const nama = String(formData.get("nama") ?? "").trim();
+  const hargaTeks = String(formData.get("harga") ?? "").trim();
+  const kategori = String(formData.get("kategori") ?? "").trim();
+  const deskripsi = String(formData.get("deskripsi") ?? "").trim();
+  const fotoUrlLama = String(formData.get("foto_url_lama") ?? "").trim();
+  const daftarFoto = formData
+    .getAll("foto")
+    .filter((item) => item && typeof item !== "string" && item.size > 0);
+
+  const nilai = {
+    nama,
+    harga: hargaTeks,
+    kategori,
+    deskripsi,
+  };
+
+  try {
+    const { supabase, user } = await dapatkanAdminSesi();
+
+    if (!user || !supabase) {
+      return {
+        error: "Sesi login tidak ditemukan atau sudah berakhir. Silakan masuk kembali.",
+        nilai,
+      };
+    }
+
+    if (!id || !/^\d+$/.test(id)) {
+      return { error: "ID produk tidak valid.", nilai };
+    }
+
+    if (!nama) {
+      return { error: "Nama produk wajib diisi.", nilai };
+    }
+
+    const harga = Number(hargaTeks);
+    if (!hargaTeks || !Number.isFinite(harga) || !Number.isInteger(harga) || harga <= 0) {
+      return {
+        error: "Harga produk wajib diisi dengan angka bulat lebih dari 0.",
+        nilai,
+      };
+    }
+
+    if (!kategori) {
+      return { error: "Kategori produk wajib diisi.", nilai };
+    }
+
+    if (!deskripsi) {
+      return { error: "Deskripsi produk wajib diisi.", nilai };
+    }
+
+    if (daftarFoto.length > 5) {
+      return { error: "Maksimal 5 foto per produk.", nilai };
+    }
+
+    for (const foto of daftarFoto) {
+      if (!TIPE_FOTO_DIIZINKAN.includes(foto.type)) {
+        return { error: "Format semua foto harus berupa JPG, PNG, WebP, atau GIF.", nilai };
+      }
+
+      if (foto.size > UKURAN_MAKSIMAL_FOTO) {
+        return { error: "Ukuran setiap foto maksimal 5 MB.", nilai };
+      }
+    }
+
+    const dataUpdate = {
+      nama,
+      harga,
+      kategori,
+      deskripsi,
+    };
+
+    if (daftarFoto.length > 0) {
+      const namaBucket = process.env.SUPABASE_STORAGE_BUCKET || "produk";
+      const supabaseStorage = buatKlienServer();
+
+      const namaSlug =
+        nama
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "")
+          .slice(0, 40) || "produk";
+
+      const pathTerunggah = [];
+      const daftarUrlFoto = [];
+
+      for (let indeks = 0; indeks < daftarFoto.length; indeks += 1) {
+        const foto = daftarFoto[indeks];
+        const ekstensi = EKSTENSI_FOTO[foto.type] || "jpg";
+        const pathFoto = `${Date.now()}-${indeks + 1}-${crypto.randomUUID().slice(0, 8)}-${namaSlug}.${ekstensi}`;
+        const bufferFoto = Buffer.from(await foto.arrayBuffer());
+
+        const { error: errorUpload } = await supabaseStorage.storage
+          .from(namaBucket)
+          .upload(pathFoto, bufferFoto, {
+            contentType: foto.type,
+            upsert: false,
+          });
+
+        if (errorUpload) {
+          console.error("Gagal mengunggah foto ke Supabase Storage:", errorUpload);
+          if (pathTerunggah.length > 0) {
+            await supabaseStorage.storage.from(namaBucket).remove(pathTerunggah).catch(() => {});
+          }
+          return {
+            error: "Gagal mengunggah foto produk ke penyimpanan. Coba lagi beberapa saat.",
+            nilai,
+          };
+        }
+
+        pathTerunggah.push(pathFoto);
+        const { data: dataUrl } = supabaseStorage.storage.from(namaBucket).getPublicUrl(pathFoto);
+        if (!dataUrl?.publicUrl) {
+          await supabaseStorage.storage.from(namaBucket).remove(pathTerunggah).catch(() => {});
+          return {
+            error: "Gagal mendapatkan URL foto produk setelah unggah.",
+            nilai,
+          };
+        }
+        daftarUrlFoto.push(dataUrl.publicUrl);
+      }
+
+      dataUpdate.foto_url = serialisasiFoto(daftarUrlFoto);
+    }
+
+    const { error: errorSimpan } = await supabase
+      .from("produk")
+      .update(dataUpdate)
+      .eq("id", id);
+
+    if (errorSimpan) {
+      console.error("Gagal menyimpan perubahan produk ke database:", errorSimpan);
+      return {
+        error: "Gagal menyimpan perubahan produk ke database. Periksa input lalu coba lagi.",
+        nilai,
+      };
+    }
+  } catch (error) {
+    console.error("Kesalahan saat mengubah produk:", error);
+    return {
+      error:
+        error instanceof Error && error.message.includes("Konfigurasi Supabase")
+          ? error.message
+          : "Terjadi kesalahan saat mengubah produk. Periksa koneksi dan pengaturan Supabase.",
+      nilai,
+    };
+  }
+
+  revalidatePath("/");
+  revalidatePath(`/produk/${id}`);
+  revalidatePath("/admin");
+  redirect("/admin?status=ubah-berhasil");
+}
+
 export async function buatDeskripsiAI({ nama, kategori }) {
   const namaRapi = String(nama ?? "").trim();
   const kategoriRapi = String(kategori ?? "").trim();

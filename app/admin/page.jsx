@@ -15,7 +15,11 @@ export default async function HalamanAdmin({ searchParams }) {
   }
 
   const notifikasiAwal =
-    status === "tambah-berhasil" ? "Produk baru berhasil ditambahkan." : null;
+    status === "tambah-berhasil"
+      ? "Produk baru berhasil ditambahkan."
+      : status === "ubah-berhasil"
+        ? "Produk berhasil diubah."
+        : null;
 
   return (
     <div className="flex flex-col gap-6 py-8">
