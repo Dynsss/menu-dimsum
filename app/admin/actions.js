@@ -417,7 +417,7 @@ export async function tambahProduk(_stateSebelumnya, formData) {
 
     if (Object.keys(errorField).length > 0) {
       return {
-        error: "Periksa kembali isian yang masih salah.",
+        error: null,
         errorField,
         nilai,
       };
@@ -566,7 +566,7 @@ export async function ubahProduk(_stateSebelumnya, formData) {
 
     if (Object.keys(errorField).length > 0) {
       return {
-        error: "Periksa kembali isian yang masih salah.",
+        error: null,
         errorField,
         nilai,
       };

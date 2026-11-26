@@ -143,6 +143,7 @@ export default function FormProduk({ produk = {}, daftarKategori = [], action, l
           value={nama}
           onChange={(e) => setNama(e.target.value)}
           placeholder="Contoh: Dimsum Ayam Udang (4 pcs)"
+          error={errorField.nama}
           required
         />
         <ErrorField pesan={errorField.nama} />
@@ -158,6 +159,7 @@ export default function FormProduk({ produk = {}, daftarKategori = [], action, l
           value={harga}
           onChange={(e) => setHarga(e.target.value)}
           placeholder="Contoh: 18000"
+          error={errorField.harga}
           required
         />
         <ErrorField pesan={errorField.harga} />
@@ -173,6 +175,7 @@ export default function FormProduk({ produk = {}, daftarKategori = [], action, l
           value={hargaDiskon}
           onChange={(e) => setHargaDiskon(e.target.value)}
           placeholder="Kosongkan jika tidak sedang diskon"
+          error={errorField.harga_diskon}
         />
         <ErrorField pesan={errorField.harga_diskon} />
       </div>
@@ -201,6 +204,7 @@ export default function FormProduk({ produk = {}, daftarKategori = [], action, l
           value={stok}
           onChange={(e) => setStok(e.target.value)}
           placeholder="Contoh: 10 (isi 0 jika habis)"
+          error={errorField.stok}
           required
         />
         <ErrorField pesan={errorField.stok} />
@@ -213,8 +217,13 @@ export default function FormProduk({ produk = {}, daftarKategori = [], action, l
             name="kategori"
             value={kategori}
             onChange={(e) => setKategori(e.target.value)}
+            aria-invalid={Boolean(errorField.kategori)}
             required
-            className="w-full rounded-lg border border-garis bg-latar px-3 py-2.5 text-base font-normal text-teks focus:border-utama focus:outline-none"
+            className={`w-full rounded-lg border bg-latar px-3 py-2.5 text-base font-normal text-teks focus:outline-none ${
+              errorField.kategori
+                ? "border-bahaya focus:border-bahaya"
+                : "border-garis focus:border-utama"
+            }`}
           >
             <option value="">
               {pilihanKategori.length > 0
@@ -240,8 +249,13 @@ export default function FormProduk({ produk = {}, daftarKategori = [], action, l
             multiple
             accept="image/jpeg,image/png,image/webp,image/gif"
             onChange={tanganiPilihFoto}
+            aria-invalid={Boolean(errorFotoLokal || errorField.foto)}
             required={daftarFotoLama.length === 0}
-            className="w-full rounded-lg border border-garis bg-latar px-3 py-2 text-sm font-normal text-teks file:mr-3 file:rounded-md file:border-0 file:bg-permukaan file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-teks hover:file:bg-garis focus:border-utama focus:outline-none"
+            className={`w-full rounded-lg border bg-latar px-3 py-2 text-sm font-normal text-teks file:mr-3 file:rounded-md file:border-0 file:bg-permukaan file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-teks hover:file:bg-garis focus:outline-none ${
+              errorFotoLokal || errorField.foto
+                ? "border-bahaya focus:border-bahaya"
+                : "border-garis focus:border-utama"
+            }`}
           />
         </label>
         <ErrorField pesan={errorFotoLokal || errorField.foto} />
@@ -283,8 +297,13 @@ export default function FormProduk({ produk = {}, daftarKategori = [], action, l
           value={deskripsi}
           onChange={(e) => setDeskripsi(e.target.value)}
           placeholder="Tuliskan deskripsi singkat produk..."
+          aria-invalid={Boolean(errorField.deskripsi)}
           required
-          className="w-full rounded-lg border border-garis bg-latar px-3 py-2.5 text-base text-teks placeholder:text-teks-lembut focus:border-utama focus:outline-none"
+          className={`w-full rounded-lg border bg-latar px-3 py-2.5 text-base text-teks placeholder:text-teks-lembut focus:outline-none ${
+            errorField.deskripsi
+              ? "border-bahaya focus:border-bahaya"
+              : "border-garis focus:border-utama"
+          }`}
         />
         <ErrorField pesan={errorField.deskripsi} />
         <p className="text-xs text-teks-lembut">
