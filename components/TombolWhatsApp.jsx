@@ -1,12 +1,16 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
+import { useKeranjang } from "@/components/KeranjangProvider";
 import { dapatkanInfoHarga, formatRupiah } from "@/lib/format";
 import { toko } from "@/lib/toko";
 
 export default function TombolWhatsApp({ produk }) {
+  const { tambahItem } = useKeranjang();
   const [jumlah, setJumlah] = useState(1);
   const [catatan, setCatatan] = useState("");
+  const [baruDitambah, setBaruDitambah] = useState(false);
 
   const habis = typeof produk.stok === "number" && produk.stok <= 0;
   const batasMaks =
@@ -116,7 +120,19 @@ export default function TombolWhatsApp({ produk }) {
         />
       </div>
 
-      <div>
+      <div className="flex flex-wrap gap-3">
+        <button
+          type="button"
+          onClick={() => {
+            tambahItem(produk, jumlahValid, catatanRapi);
+            setBaruDitambah(true);
+            setTimeout(() => setBaruDitambah(false), 2000);
+          }}
+          className="inline-flex w-full items-center justify-center rounded-lg border border-utama bg-latar px-5 py-3 font-semibold text-utama transition-colors hover:bg-utama hover:text-white sm:w-auto"
+        >
+          {baruDitambah ? "Ditambahkan ke keranjang!" : "Tambah ke keranjang"}
+        </button>
+
         <a
           href={url}
           target="_blank"
@@ -126,6 +142,15 @@ export default function TombolWhatsApp({ produk }) {
           Pesan via WhatsApp
         </a>
       </div>
+
+      {baruDitambah && (
+        <p className="text-sm text-utama">
+          Produk ditambahkan.{" "}
+          <Link href="/keranjang" className="font-semibold underline underline-offset-4">
+            Lihat keranjang
+          </Link>
+        </p>
+      )}
     </div>
   );
 }
