@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import GaleriFotoProduk from "@/components/GaleriFotoProduk";
 import KartuProduk from "@/components/KartuProduk";
+import TombolBagikan from "@/components/TombolBagikan";
 import TombolWhatsApp from "@/components/TombolWhatsApp";
 import { buatKlienServer } from "@/lib/supabase/server";
 import { dapatkanInfoHarga, formatRupiah } from "@/lib/format";
@@ -162,6 +163,7 @@ export default async function HalamanDetailProduk({ params }) {
           </div>
           <p className="max-w-prose leading-relaxed text-teks-lembut">{produk.deskripsi}</p>
           <TombolWhatsApp produk={produk} />
+          <TombolBagikan namaProduk={produk.nama} />
         </div>
       </article>
 
