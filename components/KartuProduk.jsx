@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import TombolFavorit from "@/components/TombolFavorit";
 import { useKeranjang } from "@/components/KeranjangProvider";
 import { dapatkanInfoHarga, formatRupiah } from "@/lib/format";
 import { ambilFotoUtama } from "@/lib/foto";
@@ -64,15 +65,16 @@ export default function KartuProduk({ produk }) {
         </div>
       </Link>
 
-      <div className="border-t border-garis p-3 pt-2.5">
+      <div className="flex items-center gap-2 border-t border-garis p-3 pt-2.5">
         <button
           type="button"
           onClick={tanganiTambahKeranjang}
           disabled={habis}
-          className="w-full rounded-lg border border-utama px-3 py-1.5 text-xs font-semibold text-utama transition-colors hover:bg-utama hover:text-white disabled:cursor-not-allowed disabled:border-garis disabled:bg-permukaan disabled:text-teks-lembut"
+          className="flex-1 rounded-lg border border-utama px-3 py-1.5 text-xs font-semibold text-utama transition-colors hover:bg-utama hover:text-white disabled:cursor-not-allowed disabled:border-garis disabled:bg-permukaan disabled:text-teks-lembut"
         >
           {habis ? "Stok habis" : baruDitambah ? "Ditambahkan!" : "Tambah ke keranjang"}
         </button>
+        <TombolFavorit produk={produk} />
       </div>
     </article>
   );

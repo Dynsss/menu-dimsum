@@ -1,4 +1,5 @@
 import Link from "next/link";
+import TombolFavoritHeader from "@/components/TombolFavoritHeader";
 import TombolKeranjangHeader from "@/components/TombolKeranjangHeader";
 import { toko } from "@/lib/toko";
 
@@ -16,6 +17,7 @@ export default function Header() {
           >
             Tentang
           </Link>
+          <TombolFavoritHeader />
           <TombolKeranjangHeader />
         </div>
       </div>
